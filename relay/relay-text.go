@@ -300,11 +300,12 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelN
 	}
 	totalTokens := promptTokens + completionTokens
 	var logContent string
-	if modelPrice == -1 {
-		logContent = fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
-	} else {
-		logContent = fmt.Sprintf("模型价格 %.2f，分组倍率 %.2f", modelPrice, groupRatio)
-	}
+	logContent = fmt.Sprintf("")
+	// if modelPrice == -1 {
+	// 	logContent = fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
+	// } else {
+	// 	logContent = fmt.Sprintf("模型价格 %.2f，分组倍率 %.2f", modelPrice, groupRatio)
+	// }
 
 	// record all the consume log even if quota is 0
 	if totalTokens == 0 {
