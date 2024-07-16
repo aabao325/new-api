@@ -61,7 +61,7 @@ export function renderQuotaNumberWithDigit(num, digits = 2) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   num = num.toFixed(digits);
   if (displayInCurrency) {
-    return '$' + num;
+    return '￥' + num;
   }
   return num;
 }
@@ -117,7 +117,7 @@ export function renderQuotaWithAmount(amount) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + amount;
+    return '￥' + amount;
   } else {
     return renderUnitWithQuota(amount);
   }
@@ -129,7 +129,7 @@ export function renderQuota(quota, digits = 2) {
   quotaPerUnit = parseFloat(quotaPerUnit);
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + (quota / quotaPerUnit).toFixed(digits);
+    return '￥' + (quota / quotaPerUnit).toFixed(digits);
   }
   return renderNumber(quota);
 }
@@ -144,7 +144,7 @@ export function renderModelPrice(
 ) {
   // 1 ratio = $0.002 / 1K tokens
   if (modelPrice !== -1) {
-    return '模型价格：$' + modelPrice + ' * 分组倍率：' + groupRatio + ' = $' + modelPrice * groupRatio;
+    return '模型价格：￥' + modelPrice + ' * 分组倍率：' + groupRatio + ' = ￥' + modelPrice * groupRatio;
   } else {
     if (completionRatio === undefined) {
       completionRatio = 0;
@@ -158,13 +158,13 @@ export function renderModelPrice(
     return (
       <>
         <article>
-          <p>提示：${inputRatioPrice} * {groupRatio} = ${inputRatioPrice * groupRatio} / 1M tokens</p>
-          <p>补全：${completionRatioPrice} * {groupRatio} = ${completionRatioPrice * groupRatio} / 1M tokens</p>
+          <p>提示：￥{inputRatioPrice} * {groupRatio} = ￥{inputRatioPrice * groupRatio} / 1M tokens</p>
+          <p>补全：￥{completionRatioPrice} * {groupRatio} = ￥{completionRatioPrice * groupRatio} / 1M tokens</p>
           <p></p>
           <p>
-            提示 {inputTokens} tokens / 1M tokens * ${inputRatioPrice} + 补全{' '}
-            {completionTokens} tokens / 1M tokens * ${completionRatioPrice} * 分组 {groupRatio} =
-            ${price.toFixed(6)}
+            提示 {inputTokens} tokens / 1M tokens * ￥{inputRatioPrice} + 补全{' '}
+            {completionTokens} tokens / 1M tokens * ￥{completionRatioPrice} * 分组 {groupRatio} =
+            ￥{price.toFixed(6)}
           </p>
           <p>仅供参考，以实际扣费为准</p>
         </article>
@@ -202,7 +202,7 @@ const colors = [
 
 export const modelColorMap = {
   'dall-e': 'rgb(147,112,219)', // 深紫色
-  // 'dall-e-2': 'rgb(147,112,219)', // 介于紫色和蓝色之间的色调
+  'dall-e-2': 'rgb(147,112,219)', // 介于紫色和蓝色之间的色调
   'dall-e-3': 'rgb(153,50,204)', // 介于紫罗兰和洋红之间的色调
   'gpt-3.5-turbo': 'rgb(184,227,167)', // 浅绿色
   // 'gpt-3.5-turbo-0301': 'rgb(131,220,131)', // 亮绿色

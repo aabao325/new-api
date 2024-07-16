@@ -25,7 +25,7 @@ import { IconTreeTriangleDown } from '@douyinfe/semi-icons';
 import EditToken from '../pages/Token/EditToken';
 
 const COPY_OPTIONS = [
-  { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
+  // { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
   { key: 'ama', text: 'ChatGPT Web & Midjourney', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
@@ -88,14 +88,14 @@ function renderStatus(status, model_limits_enabled = false) {
 
 const TokensTable = () => {
   const link_menu = [
-    {
-      node: 'item',
-      key: 'next',
-      name: 'ChatGPT Next Web',
-      onClick: () => {
-        onOpenLink('next');
-      },
-    },
+    // {
+    //   node: 'item',
+    //   key: 'next',
+    //   name: 'ChatGPT Next Web',
+    //   onClick: () => {
+    //     onOpenLink('next');
+    //   },
+    // },
     { node: 'item', key: 'ama', name: 'AMA 问天', value: 'ama' },
     {
       node: 'item',
@@ -207,20 +207,20 @@ const TokensTable = () => {
               trigger='click'
               position='bottomRight'
               menu={[
-                {
-                  node: 'item',
-                  key: 'next',
-                  disabled: !localStorage.getItem('chat_link'),
-                  name: 'ChatGPT Next Web',
-                  onClick: () => {
-                    onOpenLink('next', record.key);
-                  },
-                },
+                // {
+                //   node: 'item',
+                //   key: 'next',
+                //   disabled: !localStorage.getItem('chat_link'),
+                //   name: 'ChatGPT Next Web',
+                //   onClick: () => {
+                //     onOpenLink('next', record.key);
+                //   },
+                // },
                 {
                   node: 'item',
                   key: 'next-mj',
                   disabled: !localStorage.getItem('chat_link2'),
-                  name: 'ChatGPT Web & Midjourney',
+                  name: 'ChatGPT Web',
                   onClick: () => {
                     onOpenLink('next-mj', record.key);
                   },
