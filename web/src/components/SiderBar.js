@@ -105,7 +105,7 @@ const SiderBar = () => {
         icon: <IconCreditCard />,
       },
       {
-        text: '模型',
+        text: '模型价格',
         itemKey: 'pricing',
         to: '/pricing',
         icon: <IconPriceTag />,
@@ -139,7 +139,7 @@ const SiderBar = () => {
         to: '/midjourney',
         icon: <IconImage />,
         className:
-          localStorage.getItem('enable_drawing') === 'true'
+        isAdmin() && localStorage.getItem('enable_drawing') === 'true'
             ? 'semi-navigation-item-normal'
             : 'tableHiddle',
       },
@@ -149,7 +149,7 @@ const SiderBar = () => {
         to: '/task',
         icon: <IconChecklistStroked />,
         className:
-            localStorage.getItem('enable_task') === 'true'
+        isAdmin() && localStorage.getItem('enable_task') === 'true'
                 ? 'semi-navigation-item-normal'
                 : 'tableHiddle',
       },
@@ -159,12 +159,12 @@ const SiderBar = () => {
         to: '/setting',
         icon: <IconSetting />,
       },
-      // {
-      //     text: '关于',
-      //     itemKey: 'about',
-      //     to: '/about',
-      //     icon: <IconAt/>
-      // }
+      {
+          text: '关于',
+          itemKey: 'about',
+          to: '/about',
+          icon: <IconAt/>
+      }
     ],
     [
       localStorage.getItem('enable_data_export'),

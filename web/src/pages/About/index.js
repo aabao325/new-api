@@ -39,18 +39,15 @@ const About = () => {
             </Layout.Header>
             <Layout.Content>
               <p>New API 接口聚合管理平台，仅作为内部使用。</p>
-              友情链接：
-              <p>
+              <p>友情链接：   
                 <a href='https://chat.aabao.vip'>Fast GPT</a>：三分钟搭建 AI 知识库，专属自己的知识库问答系统
-              </p>
-              <p>
-                <a href='https://web.aabao.vip'>ChatGPT Web</a>：拥有你自己的 ChatGPT 网页服务，支持 GPT4、GPTs、Mj绘画等多种AI模型
+                <a href='https://web.aabao.vip'>ChatGPT Web</a>： 公益 ChatGPT 网页服务，支持 GPT4、GPTs、Mj绘画等多种AI模型
               </p>
               <p>
                 NewAPI © 2024 | 基于 One API v0.5.4 © 2024
               </p>
               <p>
-                如有任何问题，请联系管理员微信号：aabao325。
+                如有任何问题，请联系管理员微信号：【aabao325】
               </p>
             </Layout.Content>
           </Layout>

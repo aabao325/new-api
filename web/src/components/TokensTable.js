@@ -26,12 +26,12 @@ import EditToken from '../pages/Token/EditToken';
 
 const COPY_OPTIONS = [
   // { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
-  { key: 'ama', text: 'ChatGPT Web & Midjourney', value: 'ama' },
+  { key: 'ama', text: 'ChatGPT Web', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 
 const OPEN_LINK_OPTIONS = [
-  { key: 'ama', text: 'ChatGPT Web & Midjourney', value: 'ama' },
+  { key: 'ama', text: 'ChatGPT Web', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 
@@ -100,7 +100,7 @@ const TokensTable = () => {
     {
       node: 'item',
       key: 'next-mj',
-      name: 'ChatGPT Web & Midjourney',
+      name: 'ChatGPT Web',
       value: 'next-mj',
       onClick: () => {
         onOpenLink('next-mj');
@@ -219,7 +219,7 @@ const TokensTable = () => {
                 {
                   node: 'item',
                   key: 'next-mj',
-                  disabled: !localStorage.getItem('chat_link2'),
+                  disabled: !localStorage.getItem('chat_link'),
                   name: 'ChatGPT Web',
                   onClick: () => {
                     onOpenLink('next-mj', record.key);

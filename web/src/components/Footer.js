@@ -17,15 +17,15 @@ const Footer = () => {
 
   const defaultFooter = (
     <div className='custom-footer'>
-        Copyright (C) 2024.
+        Copyright (C) 2024.{' '}
       <a
         href='/'
         target='_blank'
         rel='noreferrer'
       >
-        New API
+        New API 
       </a>
-      All rights reserved.
+      {' '}All rights reserved.
     </div>
   );
 
