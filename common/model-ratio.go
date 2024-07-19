@@ -305,7 +305,7 @@ func GetCompletionRatio(name string) float64 {
 		if strings.HasPrefix(name, "gpt-4-turbo") || strings.HasSuffix(name, "preview") || strings.HasPrefix(name, "gpt-4o") {
 			return 3
 		}
-		if strings.HasPrefix(name, "mini") {
+		if strings.HasSuffix(name, "-mini") {
 			return 4
 		}
 		return 2
