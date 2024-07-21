@@ -90,7 +90,7 @@ func Path2RelayModeMidjourney(path string) int {
 		relayMode = RelayModeMidjourneyChange
 	} else if strings.HasSuffix(path, "/mj/submit/simple-change") {
 		relayMode = RelayModeMidjourneyChange
-	} else if strings.Contains(path, "/mj/submit/upload-discord-images") {
+	} else if strings.HasSuffix(path, "/mj/submit/upload-discord-images") {
 		relayMode = RelayModeMidjourneyUploads
 	} else if strings.HasSuffix(path, "/fetch") {
 		relayMode = RelayModeMidjourneyTaskFetch
