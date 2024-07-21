@@ -223,6 +223,7 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "close_request_body_failed", statusCode), nullBytes, err
 	}
 	var midjResponse dto.MidjourneyResponse
+	var mjuploadsResponse dto.MidjourneyUploadsResponse
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -239,6 +240,8 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 	} else {
 		err = json.Unmarshal(responseBody, &midjResponse)
 		if err != nil {
+			// 如果解码失败，尝试将响应体反序列化为MidjourneyUploadsResponse
+			err = json.Unmarshal(responseBody, &mjuploadsResponse)
 			return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "unmarshal_response_body_failed", statusCode), responseBody, err
 		}
 	}
