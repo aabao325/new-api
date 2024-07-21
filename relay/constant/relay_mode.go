@@ -29,6 +29,7 @@ const (
 	RelayModeMidjourneyModal
 	RelayModeMidjourneyShorten
 	RelayModeSwapFace
+	RelayModeMidjourneyUploads
 	RelayModeSunoFetch
 	RelayModeSunoFetchByID
 	RelayModeSunoSubmit
@@ -89,6 +90,8 @@ func Path2RelayModeMidjourney(path string) int {
 		relayMode = RelayModeMidjourneyChange
 	} else if strings.HasSuffix(path, "/mj/submit/simple-change") {
 		relayMode = RelayModeMidjourneyChange
+	} else if strings.Contains(path, "/mj/submit/upload-discord-images") {
+		relayMode = RelayModeMidjourneyUploads
 	} else if strings.HasSuffix(path, "/fetch") {
 		relayMode = RelayModeMidjourneyTaskFetch
 	} else if strings.HasSuffix(path, "/image-seed") {
