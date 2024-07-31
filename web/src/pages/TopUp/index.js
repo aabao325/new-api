@@ -312,7 +312,7 @@ const TopUp = () => {
                         preTopUp('wx');
                       }}
                     >
-                      微信
+                      微信支付
                     </Button>
                   </Space>
                 </Form>
