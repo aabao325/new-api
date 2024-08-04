@@ -57,7 +57,7 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 
 func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.TaskRelayInfo) (string, error) {
 	baseURL := info.BaseUrl
-	fullRequestURL := fmt.Sprintf("%s%s", baseURL, "/suno/v1/submit/"+info.Action)
+	fullRequestURL := fmt.Sprintf("%s%s", baseURL, "/suno/submit/"+info.Action)
 	return fullRequestURL, nil
 }
 
