@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"one-api/common"
+	"one-api/constant"
 	"one-api/controller"
 	"one-api/middleware"
 	"one-api/model"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -54,6 +56,8 @@ func main() {
 		common.FatalLog("failed to initialize Redis: " + err.Error())
 	}
 
+	// Initialize constants
+	constant.InitEnv()
 	// Initialize options
 	model.InitOptionMap()
 	if common.RedisEnabled {
@@ -90,11 +94,11 @@ func main() {
 		}
 		go controller.AutomaticallyTestChannels(frequency)
 	}
-	if common.IsMasterNode {
-		common.SafeGoroutine(func() {
+	if common.IsMasterNode && constant.UpdateTask {
+		gopool.Go(func() {
 			controller.UpdateMidjourneyTaskBulk()
 		})
-		common.SafeGoroutine(func() {
+		gopool.Go(func() {
 			controller.UpdateTaskBulk()
 		})
 	}

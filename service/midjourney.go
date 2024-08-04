@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
@@ -13,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func CoverActionToModelName(mjAction string) string {
@@ -50,8 +49,8 @@ func GetMjRequestModel(relayMode int, midjRequest *dto.MidjourneyRequest) (strin
 			action = constant.MjActionModal
 		case relayconstant.RelayModeSwapFace:
 			action = constant.MjActionSwapFace
-		case relayconstant.RelayModeMidjourneyUploads:
-			action = constant.MjActionUploads
+		case relayconstant.RelayModeMidjourneyUpload:
+			action = constant.MjActionUpload
 		case relayconstant.RelayModeMidjourneySimpleChange:
 			params := ConvertSimpleChangeParams(midjRequest.Content)
 			if params == nil {
@@ -223,8 +222,7 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "close_request_body_failed", statusCode), nullBytes, err
 	}
 	var midjResponse dto.MidjourneyResponse
-	var mjuploadsResponse dto.MidjourneyUploadsResponse
-
+	var midjourneyUploadsResponse dto.MidjourneyUploadResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "read_response_body_failed", statusCode), nullBytes, err
@@ -234,15 +232,16 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "close_response_body_failed", statusCode), responseBody, err
 	}
 	respStr := string(responseBody)
-	log.Printf("responseBody: %s", respStr)
+	log.Printf("respStr: %s", respStr)
 	if respStr == "" {
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "empty_response_body", statusCode), responseBody, nil
 	} else {
 		err = json.Unmarshal(responseBody, &midjResponse)
 		if err != nil {
-			// 如果解码失败，尝试将响应体反序列化为MidjourneyUploadsResponse
-			err = json.Unmarshal(responseBody, &mjuploadsResponse)
-			return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "unmarshal_response_body_failed", statusCode), responseBody, err
+			err2 := json.Unmarshal(responseBody, &midjourneyUploadsResponse)
+			if err2 != nil {
+				return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "unmarshal_response_body_failed", statusCode), responseBody, err
+			}
 		}
 	}
 	//log.Printf("midjResponse: %v", midjResponse)
