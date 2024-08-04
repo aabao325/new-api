@@ -130,7 +130,7 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 			modelRequest.Model = midjourneyModel
 		}
 		c.Set("relay_mode", relayMode)
-	} else if strings.Contains(c.Request.URL.Path, "/task/suno/") {
+	} else if strings.Contains(c.Request.URL.Path, "/suno/") {
 		relayMode := relayconstant.Path2RelaySuno(c.Request.Method, c.Request.URL.Path)
 		if relayMode == relayconstant.RelayModeSunoFetch ||
 			relayMode == relayconstant.RelayModeSunoFetchByID {
