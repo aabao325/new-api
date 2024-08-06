@@ -383,6 +383,9 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *dto.MidjourneyRespons
 	} else if relayMode == relayconstant.RelayModeMidjourneyBlend { //绘画任务，此类任务可重复
 		midjRequest.Action = constant.MjActionBlend
 	} else if relayMode == relayconstant.RelayModeMidjourneyUpload { //绘画任务，此类任务可重复
+		if midjRequest.Base64Array == nil {
+			return service.MidjourneyErrorWrapper(constant.MjRequestError, "Base64Array_is_required")
+		}
 		midjRequest.Action = constant.MjActionUpload
 	} else if midjRequest.TaskId != "" { //放大、变换任务，此类任务，如果重复且已有结果，远端api会直接返回最终结果
 		mjId := ""
