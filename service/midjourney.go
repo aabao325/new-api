@@ -239,7 +239,8 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 	} else {
 		err = json.Unmarshal(responseBody, &midjResponse)
 		if err != nil {
-			err := json.Unmarshal(responseBody, &midjourneyUploadsResponse)
+			err2 := json.Unmarshal(responseBody, &midjourneyUploadsResponse)
+			if err2 != nil {
 			return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "unmarshal_response_body_failed", statusCode), responseBody, err
 		}
 	}
