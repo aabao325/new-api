@@ -181,7 +181,7 @@ var defaultModelPrice = map[string]float64{
 	"mj_describe":       0.05,
 	"mj_upscale":        0.05,
 	"swap_face":         0.05,
-	"mj_upload":         0.05,
+	"mj_uploads":        0.001,
 }
 
 var (
