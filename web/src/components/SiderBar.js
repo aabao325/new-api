@@ -105,7 +105,7 @@ const SiderBar = () => {
         icon: <IconCreditCard />,
       },
       {
-        text: '模型价格',
+        text: '价格',
         itemKey: 'pricing',
         to: '/pricing',
         icon: <IconPriceTag />,
