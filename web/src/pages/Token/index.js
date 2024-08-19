@@ -6,8 +6,12 @@ const Token = () => (
     <Layout>
       <Layout.Header>
         <Banner
+          type='warning'
+          description='令牌无法精确控制使用额度，请勿直接将令牌分发给用户。'
+        />
+        <Banner
           type="success"
-          description='点击“聊天”直接访问ChatGPT Web进行对话。'
+          description='点击“聊天”直接访问Web站点进行对话。'
         />
       </Layout.Header>
       <Layout.Content>

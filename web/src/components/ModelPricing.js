@@ -220,14 +220,14 @@ const ModelPricing = () => {
             record.group_ratio;
           content = (
             <>
-              <Text>提示 ￥{inputRatioPrice} / 1M tokens</Text>
+              <Text>提示 ${inputRatioPrice} / 1M tokens</Text>
               <br />
-              <Text>补全 ￥{completionRatioPrice} / 1M tokens</Text>
+              <Text>补全 ${completionRatioPrice} / 1M tokens</Text>
             </>
           );
         } else {
           let price = parseFloat(text) * record.group_ratio;
-          content = <>模型价格：￥{price}</>;
+          content = <>模型价格：${price}</>;
         }
         return <div>{content}</div>;
       },

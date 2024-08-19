@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"one-api/common"
@@ -15,8 +16,6 @@ import (
 	"one-api/service"
 	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type TaskAdaptor struct {

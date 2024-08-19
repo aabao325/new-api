@@ -82,7 +82,7 @@ func Path2RelayModeMidjourney(path string) int {
 	} else if strings.HasSuffix(path, "/mj/insight-face/swap") {
 		// midjourney plus
 		relayMode = RelayModeSwapFace
-	} else if strings.HasSuffix(path, "mj/submit/upload-discord-images") {
+	} else if strings.HasSuffix(path, "/submit/upload-discord-images") {
 		// midjourney plus
 		relayMode = RelayModeMidjourneyUpload
 	} else if strings.HasSuffix(path, "/mj/submit/imagine") {

@@ -25,13 +25,13 @@ import { IconTreeTriangleDown } from '@douyinfe/semi-icons';
 import EditToken from '../pages/Token/EditToken';
 
 const COPY_OPTIONS = [
-  // { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
-  { key: 'ama', text: 'ChatGPT Web', value: 'ama' },
+  { key: 'next', text: 'ChatGPT Next Web', value: 'next' },
+  { key: 'ama', text: 'ChatGPT Web & Midjourney', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 
 const OPEN_LINK_OPTIONS = [
-  { key: 'ama', text: 'ChatGPT Web', value: 'ama' },
+  { key: 'ama', text: 'ChatGPT Web & Midjourney', value: 'ama' },
   { key: 'opencat', text: 'OpenCat', value: 'opencat' },
 ];
 
@@ -88,19 +88,19 @@ function renderStatus(status, model_limits_enabled = false) {
 
 const TokensTable = () => {
   const link_menu = [
-    // {
-    //   node: 'item',
-    //   key: 'next',
-    //   name: 'ChatGPT Next Web',
-    //   onClick: () => {
-    //     onOpenLink('next');
-    //   },
-    // },
+    {
+      node: 'item',
+      key: 'next',
+      name: 'ChatGPT Next Web',
+      onClick: () => {
+        onOpenLink('next');
+      },
+    },
     { node: 'item', key: 'ama', name: 'AMA 问天', value: 'ama' },
     {
       node: 'item',
       key: 'next-mj',
-      name: 'ChatGPT Web',
+      name: 'ChatGPT Web & Midjourney',
       value: 'next-mj',
       onClick: () => {
         onOpenLink('next-mj');
@@ -207,20 +207,20 @@ const TokensTable = () => {
               trigger='click'
               position='bottomRight'
               menu={[
-                // {
-                //   node: 'item',
-                //   key: 'next',
-                //   disabled: !localStorage.getItem('chat_link'),
-                //   name: 'ChatGPT Next Web',
-                //   onClick: () => {
-                //     onOpenLink('next', record.key);
-                //   },
-                // },
+                {
+                  node: 'item',
+                  key: 'next',
+                  disabled: !localStorage.getItem('chat_link'),
+                  name: 'ChatGPT Next Web',
+                  onClick: () => {
+                    onOpenLink('next', record.key);
+                  },
+                },
                 {
                   node: 'item',
                   key: 'next-mj',
-                  disabled: !localStorage.getItem('chat_link'),
-                  name: 'ChatGPT Web',
+                  disabled: !localStorage.getItem('chat_link2'),
+                  name: 'ChatGPT Web & Midjourney',
                   onClick: () => {
                     onOpenLink('next-mj', record.key);
                   },
@@ -425,7 +425,7 @@ const TokensTable = () => {
         url = `opencat://team/join?domain=${encodedServerAddress}&token=sk-${key}`;
         break;
       case 'lobe':
-        url = `https://chat-preview.lobehub.com/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${encodedServerAddress}"}}}`;
+        url = `https://chat-preview.lobehub.com/?settings={"keyVaults":{"openai":{"apiKey":"sk-${key}","baseURL":"${encodedServerAddress}/v1"}}}`;
         break;
       case 'next-mj':
         url =

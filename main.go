@@ -43,6 +43,11 @@ func main() {
 	if err != nil {
 		common.FatalLog("failed to initialize database: " + err.Error())
 	}
+	// Initialize SQL Database
+	err = model.InitLogDB()
+	if err != nil {
+		common.FatalLog("failed to initialize database: " + err.Error())
+	}
 	defer func() {
 		err := model.CloseDB()
 		if err != nil {
@@ -124,7 +129,7 @@ func main() {
 		common.SysError(fmt.Sprintf("panic detected: %v", err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"message": fmt.Sprintf("Panic detected, error: %v. Please try again later.", err),
+				"message": fmt.Sprintf("Panic detected, error: %v. Please  try again later.", err),
 				"type":    "new_api_panic",
 			},
 		})

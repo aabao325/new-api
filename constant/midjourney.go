@@ -46,5 +46,5 @@ var MidjourneyModel2Action = map[string]string{
 	"mj_low_variation":  MjActionLowVariation,
 	"mj_pan":            MjActionPan,
 	"swap_face":         MjActionSwapFace,
-	"mj_uploads":        MjActionUpload,
+	"mj_upload":         MjActionUpload,
 }
