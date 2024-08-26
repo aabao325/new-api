@@ -46,7 +46,6 @@
       max-width: 500px;
       text-align: center;
     }
-
   </style>
   <title>Open API</title>
 </head>
@@ -57,30 +56,26 @@
       <h1 class="text-5xl font-bold mb-6 gradient-text">欢迎来到 New API 管理平台</h1>
       <p class="text-xl text-gray-700 mb-10">本平台仅作为内部使用，谢谢访问。</p>
 
-      <div class="flex">
-          
+      <div class="flex flex-wrap md:flex-nowrap">
         <a href="https://api.aabao.vip/token" target="_parent"
-          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-4">
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-4 mb-4 md:mb-0">
           开始使用
         </a>
-        
+
         <a href="https://ovqexhc7kq.feishu.cn/sheets/JzU5s1V3dhUW9stkZ7YcPS2znTc?from=from_copylink" target="_blank"
-          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-4">
+          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-4 mb-4 md:mb-0">
           查看价格表
         </a>
 
-        <a id="contactAdmin" 
-          class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mr-4">
+        <a id="contactAdmin"
+          class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mr-4 mb-4 md:mb-0">
           联系管理员
         </a>
-        
-        <a href="https://status.aabao.vip" 
-            target="_blank"
-          class="bg-green-500 hover:bg-green-800 text-white font-bold py-2 px-4 rounded mr-4">
+
+        <a href="https://status.aabao.vip" target="_blank"
+          class="bg-green-500 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">
           API Status
         </a>
-
-        
       </div>
     </div>
   </div>
@@ -96,22 +91,19 @@
       </div>
     </div>
   </div>
-  
-
-  </div>
 
   <script>
-    document.getElementById("contactAdmin").addEventListener("click", function() {
+    document.getElementById("contactAdmin").addEventListener("click", function () {
       let modal = document.getElementById("modal");
       modal.style.display = "flex";
     });
 
-    document.getElementById("closeModal").addEventListener("click", function() {
+    document.getElementById("closeModal").addEventListener("click", function () {
       let modal = document.getElementById("modal");
       modal.style.display = "none";
     });
   </script>
-  
+
 </body>
 
 </html>
