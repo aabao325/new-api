@@ -34,6 +34,7 @@ type OpenAITextResponseChoice struct {
 
 type OpenAITextResponse struct {
 	Id      string                     `json:"id"`
+	Model   string                     `json:"model"`
 	Object  string                     `json:"object"`
 	Created int64                      `json:"created"`
 	Choices []OpenAITextResponseChoice `json:"choices"`
@@ -41,9 +42,9 @@ type OpenAITextResponse struct {
 }
 
 type OpenAIEmbeddingResponseItem struct {
-	Object    string    `json:"object"`
-	Index     int       `json:"index"`
-	Embedding []float64 `json:"embedding"`
+	Object    string `json:"object"`
+	Index     int    `json:"index"`
+	Embedding any    `json:"embedding"`
 }
 
 type OpenAIEmbeddingResponse struct {

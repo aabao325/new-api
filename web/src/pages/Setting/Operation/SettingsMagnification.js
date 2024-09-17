@@ -1,5 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Popconfirm, Row, Space, Spin } from '@douyinfe/semi-ui';
+import {
+  Button,
+  Col,
+  Form,
+  Popconfirm,
+  Row,
+  Space,
+  Spin,
+} from '@douyinfe/semi-ui';
 import {
   compareObjects,
   API,
@@ -7,7 +15,7 @@ import {
   showSuccess,
   showWarning,
   verifyJSON,
-  verifyJSONPromise
+  verifyJSONPromise,
 } from '../../../helpers';
 
 export default function SettingsMagnification(props) {
@@ -16,7 +24,7 @@ export default function SettingsMagnification(props) {
     ModelPrice: '',
     ModelRatio: '',
     CompletionRatio: '',
-    GroupRatio: ''
+    GroupRatio: '',
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
@@ -24,44 +32,47 @@ export default function SettingsMagnification(props) {
   async function onSubmit() {
     try {
       console.log('Starting validation...');
-      await refForm.current.validate().then(() => {
-        console.log('Validation passed');
-        const updateArray = compareObjects(inputs, inputsRow);
-        if (!updateArray.length) return showWarning('你似乎并没有修改什么');
-        const requestQueue = updateArray.map((item) => {
-          let value = '';
-          if (typeof inputs[item.key] === 'boolean') {
-            value = String(inputs[item.key]);
-          } else {
-            value = inputs[item.key];
-          }
-          return API.put('/api/option/', {
-            key: item.key,
-            value
-          });
-        });
-        setLoading(true);
-        Promise.all(requestQueue)
-          .then((res) => {
-            if (requestQueue.length === 1) {
-              if (res.includes(undefined)) return;
-            } else if (requestQueue.length > 1) {
-              if (res.includes(undefined))
-                return showError('部分保存失败，请重试');
+      await refForm.current
+        .validate()
+        .then(() => {
+          console.log('Validation passed');
+          const updateArray = compareObjects(inputs, inputsRow);
+          if (!updateArray.length) return showWarning('你似乎并没有修改什么');
+          const requestQueue = updateArray.map((item) => {
+            let value = '';
+            if (typeof inputs[item.key] === 'boolean') {
+              value = String(inputs[item.key]);
+            } else {
+              value = inputs[item.key];
             }
-            showSuccess('保存成功');
-            props.refresh();
-          })
-          .catch(() => {
-            showError('保存失败，请重试');
-          })
-          .finally(() => {
-            setLoading(false);
+            return API.put('/api/option/', {
+              key: item.key,
+              value,
+            });
           });
-      }).catch((error) => {
-        console.error('Validation failed:', error);
-        showError('请检查输入');
-      });
+          setLoading(true);
+          Promise.all(requestQueue)
+            .then((res) => {
+              if (requestQueue.length === 1) {
+                if (res.includes(undefined)) return;
+              } else if (requestQueue.length > 1) {
+                if (res.includes(undefined))
+                  return showError('部分保存失败，请重试');
+              }
+              showSuccess('保存成功');
+              props.refresh();
+            })
+            .catch(() => {
+              showError('保存失败，请重试');
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        })
+        .catch((error) => {
+          console.error('Validation failed:', error);
+          showError('请检查输入');
+        });
     } catch (error) {
       showError('请检查输入');
       console.error(error);
@@ -120,13 +131,13 @@ export default function SettingsMagnification(props) {
                     validator: (rule, value) => {
                       return verifyJSON(value);
                     },
-                    message: '不是合法的 JSON 字符串'
-                  }
+                    message: '不是合法的 JSON 字符串',
+                  },
                 ]}
                 onChange={(value) =>
                   setInputs({
                     ...inputs,
-                    ModelPrice: value
+                    ModelPrice: value,
                   })
                 }
               />
@@ -147,13 +158,13 @@ export default function SettingsMagnification(props) {
                     validator: (rule, value) => {
                       return verifyJSON(value);
                     },
-                    message: '不是合法的 JSON 字符串'
-                  }
+                    message: '不是合法的 JSON 字符串',
+                  },
                 ]}
                 onChange={(value) =>
                   setInputs({
                     ...inputs,
-                    ModelRatio: value
+                    ModelRatio: value,
                   })
                 }
               />
@@ -174,13 +185,13 @@ export default function SettingsMagnification(props) {
                     validator: (rule, value) => {
                       return verifyJSON(value);
                     },
-                    message: '不是合法的 JSON 字符串'
-                  }
+                    message: '不是合法的 JSON 字符串',
+                  },
                 ]}
                 onChange={(value) =>
                   setInputs({
                     ...inputs,
-                    CompletionRatio: value
+                    CompletionRatio: value,
                   })
                 }
               />
@@ -201,13 +212,13 @@ export default function SettingsMagnification(props) {
                     validator: (rule, value) => {
                       return verifyJSON(value);
                     },
-                    message: '不是合法的 JSON 字符串'
-                  }
+                    message: '不是合法的 JSON 字符串',
+                  },
                 ]}
                 onChange={(value) =>
                   setInputs({
                     ...inputs,
-                    GroupRatio: value
+                    GroupRatio: value,
                   })
                 }
               />
@@ -216,9 +227,7 @@ export default function SettingsMagnification(props) {
         </Form.Section>
       </Form>
       <Space>
-        <Button onClick={onSubmit}>
-          保存倍率设置
-        </Button>
+        <Button onClick={onSubmit}>保存倍率设置</Button>
         <Popconfirm
           title='确定重置模型倍率吗？'
           content='此修改将不可逆'
@@ -228,9 +237,7 @@ export default function SettingsMagnification(props) {
             resetModelRatio();
           }}
         >
-          <Button type={'danger'}>
-            重置模型倍率
-          </Button>
+          <Button type={'danger'}>重置模型倍率</Button>
         </Popconfirm>
       </Space>
     </Spin>

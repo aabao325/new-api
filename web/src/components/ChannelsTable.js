@@ -98,14 +98,18 @@ const ChannelsTable = () => {
       render: (text, record, index) => {
         if (text === 3) {
           if (record.other_info === '') {
-            record.other_info = '{}'
+            record.other_info = '{}';
           }
           let otherInfo = JSON.parse(record.other_info);
           let reason = otherInfo['status_reason'];
           let time = otherInfo['status_time'];
           return (
             <div>
-              <Tooltip content={'原因：' + reason + '，时间：' + timestamp2string(time)}>
+              <Tooltip
+                content={
+                  '原因：' + reason + '，时间：' + timestamp2string(time)
+                }
+              >
                 {renderStatus(text)}
               </Tooltip>
             </div>
@@ -745,7 +749,7 @@ const ChannelsTable = () => {
             <Form.Select
               field='group'
               label='分组'
-              optionList={[{ label: '选择分组', value: null}, ...groupOptions]}
+              optionList={[{ label: '选择分组', value: null }, ...groupOptions]}
               initValue={null}
               onChange={(v) => {
                 setSearchGroup(v);

@@ -37,7 +37,13 @@ const STATUS_CODE_MAPPING_EXAMPLE = {
   400: '500',
 };
 
-const fetchButtonTips = "1. 新建渠道时，请求通过当前浏览器发出；2. 编辑已有渠道，请求通过后端服务器发出"
+const REGION_EXAMPLE = {
+  default: 'us-central1',
+  'claude-3-5-sonnet-20240620': 'europe-west1',
+};
+
+const fetchButtonTips =
+  '1. 新建渠道时，请求通过当前浏览器发出；2. 编辑已有渠道，请求通过后端服务器发出';
 
 function type2secretPrompt(type) {
   // inputs.type === 15 ? '按照如下格式输入：APIKey|SecretKey' : (inputs.type === 18 ? '按照如下格式输入：APPID|APISecret|APIKey' : '请输入渠道对应的鉴权密钥')
@@ -127,10 +133,7 @@ const EditChannel = (props) => {
           ];
           break;
         case 36:
-          localModels = [
-            'suno_music',
-            'suno_lyrics',
-          ];
+          localModels = ['suno_music', 'suno_lyrics'];
           break;
         default:
           localModels = getChannelModels(value);
@@ -183,56 +186,54 @@ const EditChannel = (props) => {
     setLoading(false);
   };
 
-
   const fetchUpstreamModelList = async (name) => {
-    if (inputs["type"] !== 1) {
-      showError("仅支持 OpenAI 接口格式")
+    if (inputs['type'] !== 1) {
+      showError('仅支持 OpenAI 接口格式');
       return;
     }
-    setLoading(true)
-    const models = inputs["models"] || []
+    setLoading(true);
+    const models = inputs['models'] || [];
     let err = false;
     if (isEdit) {
-      const res = await API.get("/api/channel/fetch_models/" + channelId)
+      const res = await API.get('/api/channel/fetch_models/' + channelId);
       if (res.data && res.data?.success) {
-        models.push(...res.data.data)
+        models.push(...res.data.data);
       } else {
-        err = true
+        err = true;
       }
     } else {
-      if (!inputs?.["key"]) {
-        showError("请填写密钥")
-        err = true
+      if (!inputs?.['key']) {
+        showError('请填写密钥');
+        err = true;
       } else {
         try {
-          const host = new URL((inputs["base_url"] || "https://api.openai.com"))
+          const host = new URL(inputs['base_url'] || 'https://api.openai.com');
 
           const url = `https://${host.hostname}/v1/models`;
-          const key = inputs["key"];
+          const key = inputs['key'];
           const res = await axios.get(url, {
             headers: {
-              'Authorization': `Bearer ${key}`
-            }
-          })
+              Authorization: `Bearer ${key}`,
+            },
+          });
           if (res.data && res.data?.success) {
-            models.push(...res.data.data.map((model) => model.id))
+            models.push(...res.data.data.map((model) => model.id));
           } else {
-            err = true
+            err = true;
           }
-        }
-        catch (error) {
-          err = true
+        } catch (error) {
+          err = true;
         }
       }
     }
     if (!err) {
       handleInputChange(name, Array.from(new Set(models)));
-      showSuccess("获取模型列表成功");
+      showSuccess('获取模型列表成功');
     } else {
       showError('获取模型列表失败');
     }
     setLoading(false);
-  }
+  };
 
   const fetchModels = async () => {
     try {
@@ -389,7 +390,6 @@ const EditChannel = (props) => {
     handleInputChange('models', localModels);
   };
 
-
   return (
     <>
       <SideSheet
@@ -496,7 +496,8 @@ const EditChannel = (props) => {
                   type={'warning'}
                   description={
                     <>
-                      如果你对接的是上游One API或者New API等转发项目，请使用OpenAI类型，不要使用此类型，除非你知道你在做什么。
+                      如果你对接的是上游One API或者New
+                      API等转发项目，请使用OpenAI类型，不要使用此类型，除非你知道你在做什么。
                     </>
                   }
                 ></Banner>
@@ -520,31 +521,31 @@ const EditChannel = (props) => {
             </>
           )}
           {inputs.type === 36 && (
-              <>
-                <div style={{marginTop: 10}}>
-                  <Typography.Text strong>
-                    注意非Chat API，请务必填写正确的API地址，否则可能导致无法使用
-                  </Typography.Text>
-                </div>
-                <Input
-                    name='base_url'
-                    placeholder={
-                      '请输入到 /suno 前的路径，通常就是域名，例如：https://api.example.com '
-                    }
-                    onChange={(value) => {
-                      handleInputChange('base_url', value);
-                    }}
-                    value={inputs.base_url}
-                    autoComplete='new-password'
-                />
-              </>
+            <>
+              <div style={{ marginTop: 10 }}>
+                <Typography.Text strong>
+                  注意非Chat API，请务必填写正确的API地址，否则可能导致无法使用
+                </Typography.Text>
+              </div>
+              <Input
+                name='base_url'
+                placeholder={
+                  '请输入到 /suno 前的路径，通常就是域名，例如：https://api.example.com '
+                }
+                onChange={(value) => {
+                  handleInputChange('base_url', value);
+                }}
+                value={inputs.base_url}
+                autoComplete='new-password'
+              />
+            </>
           )}
-          <div style={{marginTop: 10}}>
+          <div style={{ marginTop: 10 }}>
             <Typography.Text strong>名称：</Typography.Text>
           </div>
           <Input
-              required
-              name='name'
+            required
+            name='name'
             placeholder={'请为渠道命名'}
             onChange={(value) => {
               handleInputChange('name', value);
@@ -586,6 +587,44 @@ const EditChannel = (props) => {
                 value={inputs.other}
                 autoComplete='new-password'
               />
+            </>
+          )}
+          {inputs.type === 41 && (
+            <>
+              <div style={{ marginTop: 10 }}>
+                <Typography.Text strong>部署地区：</Typography.Text>
+              </div>
+              <TextArea
+                name='other'
+                placeholder={
+                  '请输入部署地区，例如：us-central1\n支持使用模型映射格式\n' +
+                  '{\n' +
+                  '    "default": "us-central1",\n' +
+                  '    "claude-3-5-sonnet-20240620": "europe-west1"\n' +
+                  '}'
+                }
+                autosize={{ minRows: 2 }}
+                onChange={(value) => {
+                  handleInputChange('other', value);
+                }}
+                value={inputs.other}
+                autoComplete='new-password'
+              />
+              <Typography.Text
+                style={{
+                  color: 'rgba(var(--semi-blue-5), 1)',
+                  userSelect: 'none',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  handleInputChange(
+                    'other',
+                    JSON.stringify(REGION_EXAMPLE, null, 2),
+                  );
+                }}
+              >
+                填入模板
+              </Typography.Text>
             </>
           )}
           {inputs.type === 21 && (
@@ -734,17 +773,48 @@ const EditChannel = (props) => {
               autoComplete='new-password'
             />
           ) : (
-            <Input
-              label='密钥'
-              name='key'
-              required
-              placeholder={type2secretPrompt(inputs.type)}
-              onChange={(value) => {
-                handleInputChange('key', value);
-              }}
-              value={inputs.key}
-              autoComplete='new-password'
-            />
+            <>
+              {inputs.type === 41 ? (
+                <TextArea
+                  label='鉴权json'
+                  name='key'
+                  required
+                  placeholder={
+                    '{\n' +
+                    '  "type": "service_account",\n' +
+                    '  "project_id": "abc-bcd-123-456",\n' +
+                    '  "private_key_id": "123xxxxx456",\n' +
+                    '  "private_key": "-----BEGIN PRIVATE KEY-----xxxx\n' +
+                    '  "client_email": "xxx@developer.gserviceaccount.com",\n' +
+                    '  "client_id": "111222333",\n' +
+                    '  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n' +
+                    '  "token_uri": "https://oauth2.googleapis.com/token",\n' +
+                    '  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n' +
+                    '  "client_x509_cert_url": "https://xxxxx.gserviceaccount.com",\n' +
+                    '  "universe_domain": "googleapis.com"\n' +
+                    '}'
+                  }
+                  onChange={(value) => {
+                    handleInputChange('key', value);
+                  }}
+                  autosize={{ minRows: 10 }}
+                  value={inputs.key}
+                  autoComplete='new-password'
+                />
+              ) : (
+                <Input
+                  label='密钥'
+                  name='key'
+                  required
+                  placeholder={type2secretPrompt(inputs.type)}
+                  onChange={(value) => {
+                    handleInputChange('key', value);
+                  }}
+                  value={inputs.key}
+                  autoComplete='new-password'
+                />
+              )}
+            </>
           )}
           {inputs.type === 1 && (
             <>
@@ -802,23 +872,26 @@ const EditChannel = (props) => {
               </Space>
             </div>
           )}
-          {inputs.type !== 3 && inputs.type !== 8 && inputs.type !== 22 && inputs.type !== 36 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>代理：</Typography.Text>
-              </div>
-              <Input
-                label='代理'
-                name='base_url'
-                placeholder={'此项可选，用于通过代理站来进行 API 调用'}
-                onChange={(value) => {
-                  handleInputChange('base_url', value);
-                }}
-                value={inputs.base_url}
-                autoComplete='new-password'
-              />
-            </>
-          )}
+          {inputs.type !== 3 &&
+            inputs.type !== 8 &&
+            inputs.type !== 22 &&
+            inputs.type !== 36 && (
+              <>
+                <div style={{ marginTop: 10 }}>
+                  <Typography.Text strong>代理：</Typography.Text>
+                </div>
+                <Input
+                  label='代理'
+                  name='base_url'
+                  placeholder={'此项可选，用于通过代理站来进行 API 调用'}
+                  onChange={(value) => {
+                    handleInputChange('base_url', value);
+                  }}
+                  value={inputs.base_url}
+                  autoComplete='new-password'
+                />
+              </>
+            )}
           {inputs.type === 22 && (
             <>
               <div style={{ marginTop: 10 }}>

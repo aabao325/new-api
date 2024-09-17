@@ -133,6 +133,10 @@ export function openPage(url) {
 }
 
 export function removeTrailingSlash(url) {
+  if (!url) {
+    return '';
+  }
+
   if (url.endsWith('/')) {
     return url.slice(0, -1);
   } else {
@@ -233,7 +237,6 @@ export function verifyJSONPromise(value) {
     return Promise.reject('不是合法的 JSON 字符串');
   }
 }
-
 
 export function shouldShowPrompt(id) {
   let prompt = localStorage.getItem(`prompt-${id}`);

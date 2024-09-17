@@ -1,8 +1,15 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/User';
-import { API, getLogo, showError, showInfo, showSuccess, updateAPI } from '../helpers';
-import { onGitHubOAuthClicked } from './utils';
+import {
+  API,
+  getLogo,
+  showError,
+  showInfo,
+  showSuccess,
+  updateAPI,
+} from '../helpers';
+import { onGitHubOAuthClicked, onLinuxDoOAuthClicked } from './utils';
 import Turnstile from 'react-turnstile';
 import {
   Button,
@@ -18,6 +25,7 @@ import Text from '@douyinfe/semi-ui/lib/es/typography/text';
 import TelegramLoginButton from 'react-telegram-login';
 
 import { IconGithubLogo } from '@douyinfe/semi-icons';
+import LinuxDoIcon from './LinuxDoIcon';
 import WeChatIcon from './WeChatIcon';
 import { setUserData } from '../helpers/data.js';
 
@@ -101,7 +109,7 @@ const LoginForm = () => {
       if (success) {
         userDispatch({ type: 'login', payload: data });
         setUserData(data);
-        updateAPI()
+        updateAPI();
         showSuccess('登录成功！');
         if (username === 'root' && password === '123456') {
           Modal.error({
@@ -209,6 +217,7 @@ const LoginForm = () => {
                   </Text>
                 </div>
                 {status.github_oauth ||
+                status.linuxdo_oauth ||
                 status.wechat_login ||
                 status.telegram_oauth ? (
                   <>
@@ -233,35 +242,43 @@ const LoginForm = () => {
                       ) : (
                         <></>
                       )}
+                      {status.linuxdo_oauth ? (
+                        <Button
+                          type='primary'
+                          icon={<LinuxDoIcon />}
+                          style={{ color: '#000', margin: '0 5px' }}
+                          onClick={() =>
+                            onLinuxDoOAuthClicked(status.linuxdo_client_id)
+                          }
+                        />
+                      ) : (
+                        <></>
+                      )}
                       {status.wechat_login ? (
                         <Button
                           type='primary'
-                          style={{ color: 'rgba(var(--semi-green-5), 1)' }}
+                          style={{
+                            color: 'rgba(var(--semi-green-5), 1)',
+                            margin: '0 5px',
+                          }}
                           icon={<Icon svg={<WeChatIcon />} />}
                           onClick={onWeChatLoginClicked}
                         />
                       ) : (
                         <></>
                       )}
+
+                      {status.telegram_oauth ? (
+                        <TelegramLoginButton
+                          className='semi-button semi-button-with-icon semi-button-with-icon-only'
+                          buttonSize='medium'
+                          dataOnauth={onTelegramLoginClicked}
+                          botName={status.telegram_bot_name}
+                        />
+                      ) : (
+                        <></>
+                      )}
                     </div>
-                    {status.telegram_oauth ? (
-                      <>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            marginTop: 5,
-                          }}
-                        >
-                          <TelegramLoginButton
-                            dataOnauth={onTelegramLoginClicked}
-                            botName={status.telegram_bot_name}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <></>
-                    )}
                   </>
                 ) : (
                   <></>

@@ -233,7 +233,7 @@ func GetAllMidjourney(c *gin.Context) {
 	}
 	if constant.MjForwardUrlEnabled {
 		for i, midjourney := range logs {
-			midjourney.ImageUrl = constant.ServerAddress + "/mj/image/" + midjourney.MjId
+			midjourney.ImageUrl = common.ServerAddress + "/mj/image/" + midjourney.MjId
 			logs[i] = midjourney
 		}
 	}
@@ -265,7 +265,7 @@ func GetUserMidjourney(c *gin.Context) {
 	}
 	if constant.MjForwardUrlEnabled {
 		for i, midjourney := range logs {
-			midjourney.ImageUrl = constant.ServerAddress + "/mj/image/" + midjourney.MjId
+			midjourney.ImageUrl = common.ServerAddress + "/mj/image/" + midjourney.MjId
 			logs[i] = midjourney
 		}
 	}

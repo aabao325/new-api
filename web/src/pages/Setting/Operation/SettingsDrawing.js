@@ -160,11 +160,7 @@ export default function SettingsDrawing(props) {
               <Col span={8}>
                 <Form.Switch
                   field={'MjActionCheckSuccessEnabled'}
-                  label={
-                    <>
-                      检测必须等待绘图成功才能进行放大等操作
-                    </>
-                  }
+                  label={<>检测必须等待绘图成功才能进行放大等操作</>}
                   size='large'
                   checkedText='｜'
                   uncheckedText='〇'

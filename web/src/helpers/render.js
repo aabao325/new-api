@@ -144,7 +144,14 @@ export function renderModelPrice(
 ) {
   // 1 ratio = $0.002 / 1K tokens
   if (modelPrice !== -1) {
-    return '模型价格：$' + modelPrice + ' * 分组倍率：' + groupRatio + ' = $' + modelPrice * groupRatio;
+    return (
+      '模型价格：$' +
+      modelPrice +
+      ' * 分组倍率：' +
+      groupRatio +
+      ' = $' +
+      modelPrice * groupRatio
+    );
   } else {
     if (completionRatio === undefined) {
       completionRatio = 0;
@@ -158,13 +165,19 @@ export function renderModelPrice(
     return (
       <>
         <article>
-          <p>提示：${inputRatioPrice} * {groupRatio} = ${inputRatioPrice * groupRatio} / 1M tokens</p>
-          <p>补全：${completionRatioPrice} * {groupRatio} = ${completionRatioPrice * groupRatio} / 1M tokens</p>
+          <p>
+            提示：${inputRatioPrice} * {groupRatio} = $
+            {inputRatioPrice * groupRatio} / 1M tokens
+          </p>
+          <p>
+            补全：${completionRatioPrice} * {groupRatio} = $
+            {completionRatioPrice * groupRatio} / 1M tokens
+          </p>
           <p></p>
           <p>
             提示 {inputTokens} tokens / 1M tokens * ${inputRatioPrice} + 补全{' '}
-            {completionTokens} tokens / 1M tokens * ${completionRatioPrice} * 分组 {groupRatio} =
-            ${price.toFixed(6)}
+            {completionTokens} tokens / 1M tokens * ${completionRatioPrice} *
+            分组 {groupRatio} = ${price.toFixed(6)}
           </p>
           <p>仅供参考，以实际扣费为准</p>
         </article>
@@ -202,31 +215,34 @@ const colors = [
 
 export const modelColorMap = {
   'dall-e': 'rgb(147,112,219)', // 深紫色
-  // 'dall-e-2': 'rgb(147,112,219)', // 介于紫色和蓝色之间的色调
+  'dall-e-2': 'rgb(147,112,219)', // 介于紫色和蓝色之间的色调
   'dall-e-3': 'rgb(153,50,204)', // 介于紫罗兰和洋红之间的色调
   'gpt-3.5-turbo': 'rgb(184,227,167)', // 浅绿色
-  // 'gpt-3.5-turbo-0301': 'rgb(131,220,131)', // 亮绿色
+  'gpt-3.5-turbo-0301': 'rgb(131,220,131)', // 亮绿色
   'gpt-3.5-turbo-0613': 'rgb(60,179,113)', // 海洋绿
   'gpt-3.5-turbo-1106': 'rgb(32,178,170)', // 浅海洋绿
   'gpt-3.5-turbo-16k': 'rgb(149,252,206)', // 淡橙色
   'gpt-3.5-turbo-16k-0613': 'rgb(119,255,214)', // 淡桃色
   'gpt-3.5-turbo-instruct': 'rgb(175,238,238)', // 粉蓝色
   'gpt-4': 'rgb(135,206,235)', // 天蓝色
-  // 'gpt-4-0314': 'rgb(70,130,180)', // 钢蓝色
+  'gpt-4-0314': 'rgb(70,130,180)', // 钢蓝色
   'gpt-4-0613': 'rgb(100,149,237)', // 矢车菊蓝
   'gpt-4-1106-preview': 'rgb(30,144,255)', // 道奇蓝
   'gpt-4-0125-preview': 'rgb(2,177,236)', // 深天蓝
   'gpt-4-turbo-preview': 'rgb(2,177,255)', // 深天蓝
+  'gpt-4-turbo': 'rgb(2,190,255)', // 深天蓝
+  'gpt-4-turbo-2024-04-09': 'rgb(2,200,255)', // 深天蓝
   'gpt-4-32k': 'rgb(104,111,238)', // 中紫色
-  // 'gpt-4-32k-0314': 'rgb(90,105,205)', // 暗灰蓝色
+  'gpt-4-32k-0314': 'rgb(90,105,205)', // 暗灰蓝色
   'gpt-4-32k-0613': 'rgb(61,71,139)', // 暗蓝灰色
   'gpt-4-all': 'rgb(65,105,225)', // 皇家蓝
   'gpt-4-gizmo-*': 'rgb(0,0,255)', // 纯蓝色
+  'g-*': 'rgb(0,0,255)', // 纯蓝色
   'gpt-4-vision-preview': 'rgb(25,25,112)', // 午夜蓝
   'text-ada-001': 'rgb(255,192,203)', // 粉红色
   'text-babbage-001': 'rgb(255,160,122)', // 浅珊瑚色
   'text-curie-001': 'rgb(219,112,147)', // 苍紫罗兰色
-  // 'text-davinci-002': 'rgb(199,21,133)', // 中紫罗兰红色
+  'text-davinci-002': 'rgb(199,21,133)', // 中紫罗兰红色
   'text-davinci-003': 'rgb(219,112,147)', // 苍紫罗兰色（与Curie相同，表示同一个系列）
   'text-davinci-edit-001': 'rgb(255,105,180)', // 热粉色
   'text-embedding-ada-002': 'rgb(255,182,193)', // 浅粉红

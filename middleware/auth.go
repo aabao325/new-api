@@ -16,6 +16,7 @@ func authHelper(c *gin.Context, minRole int) {
 	role := session.Get("role")
 	id := session.Get("id")
 	status := session.Get("status")
+	linuxDoEnable := session.Get("linuxdo_enable")
 	useAccessToken := false
 	if username == nil {
 		// Check access token
@@ -35,6 +36,7 @@ func authHelper(c *gin.Context, minRole int) {
 			role = user.Role
 			id = user.Id
 			status = user.Status
+			linuxDoEnable = user.LinuxDoId == "" || user.LinuxDoLevel >= common.LinuxDoMinLevel
 			useAccessToken = true
 		} else {
 			c.JSON(http.StatusOK, gin.H{
@@ -79,6 +81,14 @@ func authHelper(c *gin.Context, minRole int) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "用户已被封禁",
+		})
+		c.Abort()
+		return
+	}
+	if nil != linuxDoEnable && !linuxDoEnable.(bool) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户 LINUX DO 信任等级不足",
 		})
 		c.Abort()
 		return
@@ -160,6 +170,15 @@ func TokenAuth() func(c *gin.Context) {
 		}
 		if !userEnabled {
 			abortWithOpenAiMessage(c, http.StatusForbidden, "用户已被封禁")
+			return
+		}
+		linuxDoEnabled, err := model.CacheIsLinuxDoEnabled(token.UserId)
+		if err != nil {
+			abortWithOpenAiMessage(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !linuxDoEnabled {
+			abortWithOpenAiMessage(c, http.StatusForbidden, "用户 LINUX DO 信任等级不足")
 			return
 		}
 		c.Set("id", token.UserId)

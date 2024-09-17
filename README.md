@@ -44,7 +44,7 @@
 
 ## 模型支持
 此版本额外支持以下模型：
-1. 第三方模型 **gps** （gpt-4-gizmo-*）
+1. 第三方模型 **gps** （gpt-4-gizmo-*, g-*）
 2. 智谱glm-4v，glm-4v识图
 3. Anthropic Claude 3
 4. [Ollama](https://github.com/ollama/ollama?tab=readme-ov-file)，添加渠道时，密钥可以随便填写，默认的请求地址是[http://localhost:11434](http://localhost:11434)，如果需要修改请在渠道中修改
@@ -54,8 +54,9 @@
 8. [Suno API](https://github.com/Suno-API/Suno-API) 接口，[对接文档](Suno.md)
 9. Rerank模型，目前支持[Cohere](https://cohere.ai/)和[Jina](https://jina.ai/)，[对接文档](Rerank.md)
 10. Dify
+11. Vertex AI，目前兼容Claude，Gemini，Llama3.1
 
-您可以在渠道中添加自定义模型gpt-4-gizmo-*，此模型并非OpenAI官方模型，而是第三方模型，使用官方key无法调用。
+您可以在渠道中添加自定义模型gpt-4-gizmo-*或g-*，此模型并非OpenAI官方模型，而是第三方模型，使用官方key无法调用。
 
 ## 比原版One API多出的配置
 - `STREAMING_TIMEOUT`：设置流式一次回复的超时时间，默认为 30 秒。
@@ -65,7 +66,7 @@
 - `GET_MEDIA_TOKEN_NOT_STREAM`：是否在非流（`stream=false`）情况下统计图片token，默认为 `true`。
 - `UPDATE_TASK`：是否更新异步任务（Midjourney、Suno），默认为 `true`，关闭后将不会更新任务进度。
 - `GEMINI_MODEL_MAP`：Gemini模型指定版本(v1/v1beta)，使用“模型:版本”指定，","分隔，例如：-e GEMINI_MODEL_MAP="gemini-1.5-pro-latest:v1beta,gemini-1.5-pro-001:v1beta"，为空则使用默认配置
-
+- `COHERE_SAFETY_SETTING`：Cohere模型[安全设置](https://docs.cohere.com/docs/safety-modes#overview)，可选值为 `NONE`, `CONTEXTUAL`，`STRICT`，默认为 `NONE`。
 ## 部署
 ### 部署要求
 - 本地数据库（默认）：SQLite（Docker 部署默认使用 SQLite，必须挂载 `/data` 目录到宿主机）

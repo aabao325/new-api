@@ -31,10 +31,12 @@ func InitOptionMap() {
 	common.OptionMap["PasswordRegisterEnabled"] = strconv.FormatBool(common.PasswordRegisterEnabled)
 	common.OptionMap["EmailVerificationEnabled"] = strconv.FormatBool(common.EmailVerificationEnabled)
 	common.OptionMap["GitHubOAuthEnabled"] = strconv.FormatBool(common.GitHubOAuthEnabled)
+	common.OptionMap["LinuxDoOAuthEnabled"] = strconv.FormatBool(common.LinuxDoOAuthEnabled)
 	common.OptionMap["TelegramOAuthEnabled"] = strconv.FormatBool(common.TelegramOAuthEnabled)
 	common.OptionMap["WeChatAuthEnabled"] = strconv.FormatBool(common.WeChatAuthEnabled)
 	common.OptionMap["TurnstileCheckEnabled"] = strconv.FormatBool(common.TurnstileCheckEnabled)
 	common.OptionMap["RegisterEnabled"] = strconv.FormatBool(common.RegisterEnabled)
+	common.OptionMap["UserSelfDeletionEnabled"] = strconv.FormatBool(common.UserSelfDeletionEnabled)
 	common.OptionMap["AutomaticDisableChannelEnabled"] = strconv.FormatBool(common.AutomaticDisableChannelEnabled)
 	common.OptionMap["AutomaticEnableChannelEnabled"] = strconv.FormatBool(common.AutomaticEnableChannelEnabled)
 	common.OptionMap["LogConsumeEnabled"] = strconv.FormatBool(common.LogConsumeEnabled)
@@ -60,17 +62,19 @@ func InitOptionMap() {
 	common.OptionMap["SystemName"] = common.SystemName
 	common.OptionMap["Logo"] = common.Logo
 	common.OptionMap["ServerAddress"] = ""
-	common.OptionMap["WorkerUrl"] = constant.WorkerUrl
-	common.OptionMap["WorkerValidKey"] = constant.WorkerValidKey
-	common.OptionMap["PayAddress"] = ""
-	common.OptionMap["CustomCallbackAddress"] = ""
-	common.OptionMap["EpayId"] = ""
-	common.OptionMap["EpayKey"] = ""
-	common.OptionMap["Price"] = strconv.FormatFloat(constant.Price, 'f', -1, 64)
-	common.OptionMap["MinTopUp"] = strconv.Itoa(constant.MinTopUp)
+	common.OptionMap["OutProxyUrl"] = ""
+	common.OptionMap["StripeApiSecret"] = common.StripeApiSecret
+	common.OptionMap["StripeWebhookSecret"] = common.StripeWebhookSecret
+	common.OptionMap["StripePriceId"] = common.StripePriceId
+	common.OptionMap["PaymentEnabled"] = strconv.FormatBool(common.PaymentEnabled)
+	common.OptionMap["StripeUnitPrice"] = strconv.FormatFloat(common.StripeUnitPrice, 'f', -1, 64)
+	common.OptionMap["MinTopUp"] = strconv.Itoa(common.MinTopUp)
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
 	common.OptionMap["GitHubClientId"] = ""
 	common.OptionMap["GitHubClientSecret"] = ""
+	common.OptionMap["LinuxDoClientId"] = ""
+	common.OptionMap["LinuxDoClientSecret"] = ""
+	common.OptionMap["LinuxDoMinLevel"] = strconv.Itoa(common.LinuxDoMinLevel)
 	common.OptionMap["TelegramBotToken"] = ""
 	common.OptionMap["TelegramBotName"] = ""
 	common.OptionMap["WeChatServerAddress"] = ""
@@ -173,6 +177,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.EmailVerificationEnabled = boolValue
 		case "GitHubOAuthEnabled":
 			common.GitHubOAuthEnabled = boolValue
+		case "LinuxDoOAuthEnabled":
+			common.LinuxDoOAuthEnabled = boolValue
 		case "WeChatAuthEnabled":
 			common.WeChatAuthEnabled = boolValue
 		case "TelegramOAuthEnabled":
@@ -181,6 +187,8 @@ func updateOptionMap(key string, value string) (err error) {
 			common.TurnstileCheckEnabled = boolValue
 		case "RegisterEnabled":
 			common.RegisterEnabled = boolValue
+		case "UserSelfDeletionEnabled":
+			common.UserSelfDeletionEnabled = boolValue
 		case "EmailDomainRestrictionEnabled":
 			common.EmailDomainRestrictionEnabled = boolValue
 		case "EmailAliasRestrictionEnabled":
@@ -240,29 +248,33 @@ func updateOptionMap(key string, value string) (err error) {
 	case "SMTPToken":
 		common.SMTPToken = value
 	case "ServerAddress":
-		constant.ServerAddress = value
-	case "WorkerUrl":
-		constant.WorkerUrl = value
-	case "WorkerValidKey":
-		constant.WorkerValidKey = value
-	case "PayAddress":
-		constant.PayAddress = value
-	case "CustomCallbackAddress":
-		constant.CustomCallbackAddress = value
-	case "EpayId":
-		constant.EpayId = value
-	case "EpayKey":
-		constant.EpayKey = value
-	case "Price":
-		constant.Price, _ = strconv.ParseFloat(value, 64)
+		common.ServerAddress = value
+	case "OutProxyUrl":
+		common.OutProxyUrl = value
+	case "StripeApiSecret":
+		common.StripeApiSecret = value
+	case "StripeWebhookSecret":
+		common.StripeWebhookSecret = value
+	case "StripePriceId":
+		common.StripePriceId = value
+	case "PaymentEnabled":
+		common.PaymentEnabled, _ = strconv.ParseBool(value)
+	case "StripeUnitPrice":
+		common.StripeUnitPrice, _ = strconv.ParseFloat(value, 64)
 	case "MinTopUp":
-		constant.MinTopUp, _ = strconv.Atoi(value)
+		common.MinTopUp, _ = strconv.Atoi(value)
 	case "TopupGroupRatio":
 		err = common.UpdateTopupGroupRatioByJSONString(value)
 	case "GitHubClientId":
 		common.GitHubClientId = value
 	case "GitHubClientSecret":
 		common.GitHubClientSecret = value
+	case "LinuxDoClientId":
+		common.LinuxDoClientId = value
+	case "LinuxDoClientSecret":
+		common.LinuxDoClientSecret = value
+	case "LinuxDoMinLevel":
+		common.LinuxDoMinLevel, _ = strconv.Atoi(value)
 	case "Footer":
 		common.Footer = value
 	case "SystemName":

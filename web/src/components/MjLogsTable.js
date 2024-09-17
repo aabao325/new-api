@@ -92,9 +92,9 @@ function renderType(type) {
       );
     case 'UPLOAD':
       return (
-          <Tag color='blue' size='large'>
-            上传文件
-          </Tag>
+        <Tag color='blue' size='large'>
+          上传文件
+        </Tag>
       );
     case 'SHORTEN':
       return (
@@ -262,7 +262,7 @@ function renderDuration(submit_time, finishTime) {
 
   // 返回带有样式的颜色标签
   return (
-    <Tag color={color} size="large">
+    <Tag color={color} size='large'>
       {durationSec} 秒
     </Tag>
   );

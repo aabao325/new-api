@@ -105,7 +105,7 @@ func responseAli2OpenAIImage(c *gin.Context, response *AliResponse, info *relayc
 	for _, data := range response.Output.Results {
 		var b64Json string
 		if responseFormat == "b64_json" {
-			_, b64, err := service.GetImageFromUrl(data.Url)
+			_, b64, err := common.GetImageFromUrl(data.Url)
 			if err != nil {
 				common.LogError(c, "get_image_data_failed: "+err.Error())
 				continue

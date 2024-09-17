@@ -9,9 +9,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// Pay Settings
+
+var StripeApiSecret = ""
+var StripeWebhookSecret = ""
+var StripePriceId = ""
+var PaymentEnabled = false
+var StripeUnitPrice = 8.0
+var MinTopUp = 5
+
 var StartTime = time.Now().Unix() // unit: second
 var Version = "v0.0.0"            // this hard coding will be replaced automatically when building, no need to manually change
 var SystemName = "New API"
+var ServerAddress = "http://localhost:3000"
+var OutProxyUrl = ""
 var Footer = ""
 var Logo = ""
 var TopUpLink = ""
@@ -41,10 +52,12 @@ var PasswordLoginEnabled = true
 var PasswordRegisterEnabled = true
 var EmailVerificationEnabled = false
 var GitHubOAuthEnabled = false
+var LinuxDoOAuthEnabled = false
 var WeChatAuthEnabled = false
 var TelegramOAuthEnabled = false
 var TurnstileCheckEnabled = false
 var RegisterEnabled = true
+var UserSelfDeletionEnabled = false
 
 var EmailDomainRestrictionEnabled = false // 是否启用邮箱域名限制
 var EmailAliasRestrictionEnabled = false  // 是否启用邮箱别名限制
@@ -74,6 +87,10 @@ var SMTPToken = ""
 
 var GitHubClientId = ""
 var GitHubClientSecret = ""
+
+var LinuxDoClientId = ""
+var LinuxDoClientSecret = ""
+var LinuxDoMinLevel = 0
 
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
@@ -111,6 +128,9 @@ var BatchUpdateInterval = GetEnvOrDefault("BATCH_UPDATE_INTERVAL", 5)
 var RelayTimeout = GetEnvOrDefault("RELAY_TIMEOUT", 0) // unit is second
 
 var GeminiSafetySetting = GetEnvOrDefaultString("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
+
+// https://docs.cohere.com/docs/safety-modes Type; NONE/CONTEXTUAL/STRICT
+var CohereSafetySetting = GetEnvOrDefaultString("COHERE_SAFETY_SETTING", "NONE")
 
 const (
 	RequestIdKey = "X-Oneapi-Request-Id"
@@ -177,6 +197,12 @@ const (
 )
 
 const (
+	TopUpStatusPending = "pending"
+	TopUpStatusSuccess = "success"
+	TopUpStatusExpired = "expired"
+)
+
+const (
 	ChannelTypeUnknown        = 0
 	ChannelTypeOpenAI         = 1
 	ChannelTypeMidjourney     = 2
@@ -214,6 +240,7 @@ const (
 	ChannelTypeJina           = 38
 	ChannelCloudflare         = 39
 	ChannelTypeSiliconFlow    = 40
+	ChannelTypeVertexAi       = 41
 
 	ChannelTypeDummy // this one is only for count, do not add any channel after this
 
@@ -261,4 +288,5 @@ var ChannelBaseURLs = []string{
 	"https://api.jina.ai",                       //38
 	"https://api.cloudflare.com",                //39
 	"https://api.siliconflow.cn",                //40
+	"",                                          //41
 }

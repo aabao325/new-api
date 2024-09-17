@@ -11,6 +11,7 @@ import EditUser from './pages/User/EditUser';
 import { getLogo, getSystemName } from './helpers';
 import PasswordResetForm from './components/PasswordResetForm';
 import GitHubOAuth from './components/GitHubOAuth';
+import LinuxDoOAuth from './components/LinuxDoOAuth';
 import PasswordResetConfirm from './components/PasswordResetConfirm';
 import { UserContext } from './context/User';
 import Channel from './pages/Channel';
@@ -23,7 +24,7 @@ import Chat from './pages/Chat';
 import { Layout } from '@douyinfe/semi-ui';
 import Midjourney from './pages/Midjourney';
 import Pricing from './pages/Pricing/index.js';
-import Task from "./pages/Task/index.js";
+import Task from './pages/Task/index.js';
 // import Detail from './pages/Detail';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -174,6 +175,14 @@ function App() {
             }
           />
           <Route
+            path='/oauth/linuxdo'
+            element={
+              <Suspense fallback={<Loading></Loading>}>
+                <LinuxDoOAuth />
+              </Suspense>
+            }
+          />
+          <Route
             path='/setting'
             element={
               <PrivateRoute>
@@ -224,11 +233,11 @@ function App() {
           <Route
             path='/task'
             element={
-                <PrivateRoute>
-                    <Suspense fallback={<Loading></Loading>}>
-                        <Task />
-                    </Suspense>
-                </PrivateRoute>
+              <PrivateRoute>
+                <Suspense fallback={<Loading></Loading>}>
+                  <Task />
+                </Suspense>
+              </PrivateRoute>
             }
           />
           <Route

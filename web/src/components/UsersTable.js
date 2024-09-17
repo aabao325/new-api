@@ -351,7 +351,9 @@ const UsersTable = () => {
       return;
     }
     setSearching(true);
-    const res = await API.get(`/api/user/search?keyword=${searchKeyword}&group=${searchGroup}`);
+    const res = await API.get(
+      `/api/user/search?keyword=${searchKeyword}&group=${searchGroup}`,
+    );
     const { success, message, data } = res.data;
     if (success) {
       setUsers(data);
@@ -452,34 +454,34 @@ const UsersTable = () => {
       >
         <div style={{ display: 'flex' }}>
           <Space>
-          <Form.Input
-            label='搜索关键字'
-            icon='search'
-            field='keyword'
-            iconPosition='left'
-            placeholder='搜索用户的 ID，用户名，显示名称，以及邮箱地址 ...'
-            value={searchKeyword}
-            loading={searching}
-            onChange={(value) => handleKeywordChange(value)}
-          />
-          <Form.Select
-            field='group'
-            label='分组'
-            optionList={groupOptions}
-            onChange={(value) => {
-              setSearchGroup(value);
-              searchUsers(searchKeyword, value);
-            }}
-          />
-          <Button
-            label='查询'
-            type='primary'
-            htmlType='submit'
-            className='btn-margin-right'
-            style={{ marginRight: 8 }}
-          >
-            查询
-          </Button>
+            <Form.Input
+              label='搜索关键字'
+              icon='search'
+              field='keyword'
+              iconPosition='left'
+              placeholder='搜索用户的 ID，用户名，显示名称，以及邮箱地址 ...'
+              value={searchKeyword}
+              loading={searching}
+              onChange={(value) => handleKeywordChange(value)}
+            />
+            <Form.Select
+              field='group'
+              label='分组'
+              optionList={groupOptions}
+              onChange={(value) => {
+                setSearchGroup(value);
+                searchUsers(searchKeyword, value);
+              }}
+            />
+            <Button
+              label='查询'
+              type='primary'
+              htmlType='submit'
+              className='btn-margin-right'
+              style={{ marginRight: 8 }}
+            >
+              查询
+            </Button>
           </Space>
         </div>
       </Form>
