@@ -25,7 +25,9 @@ func GetAndValidateRequest(c *gin.Context, format types.RelayFormat) (request dt
 	case types.RelayFormatOpenAI:
 		request, err = GetAndValidateTextRequest(c, relayMode)
 	case types.RelayFormatGemini:
-		if strings.Contains(c.Request.URL.Path, ":embedContent") {
+		if relayMode == relayconstant.RelayModeGeminiInteractions {
+			request, err = GetAndValidateGeminiInteractionsRequest(c)
+		} else if strings.Contains(c.Request.URL.Path, ":embedContent") {
 			request, err = GetAndValidateGeminiEmbeddingRequest(c)
 		} else if strings.Contains(c.Request.URL.Path, ":batchEmbedContents") {
 			request, err = GetAndValidateGeminiBatchEmbeddingRequest(c)
@@ -55,6 +57,20 @@ func GetAndValidateRequest(c *gin.Context, format types.RelayFormat) (request dt
 		return nil, fmt.Errorf("unsupported relay format: %s", format)
 	}
 	return request, err
+}
+
+func GetAndValidateGeminiInteractionsRequest(c *gin.Context) (*dto.GeminiInteractionsRequest, error) {
+	request := &dto.GeminiInteractionsRequest{}
+	if err := common.UnmarshalBodyReusable(c, request); err != nil {
+		return nil, err
+	}
+	if request.Model == "" {
+		return nil, errors.New("model is required")
+	}
+	if exceedsMaxTokensLimit(request.MaxOutputTokens) {
+		return nil, errors.New("max_output_tokens is invalid")
+	}
+	return request, nil
 }
 
 func GetAndValidAudioRequest(c *gin.Context, relayMode int) (*dto.AudioRequest, error) {

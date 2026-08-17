@@ -198,6 +198,12 @@ func SetRelayRouter(router *gin.Engine) {
 	relayGeminiRouter.Use(middleware.ModelRequestRateLimit())
 	relayGeminiRouter.Use(middleware.Distribute())
 	{
+		// Gemini Interactions API supports multimodal generation through a model
+		// specified in the request body.
+		relayGeminiRouter.POST("/interactions", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatGemini)
+		})
+
 		// Gemini API 路径格式: /v1beta/models/{model_name}:{action}
 		relayGeminiRouter.POST("/models/*path", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatGemini)

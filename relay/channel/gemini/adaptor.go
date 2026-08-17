@@ -148,6 +148,14 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	}
 
 	version := model_setting.GetGeminiVersionSetting(info.UpstreamModelName)
+	if info.RelayMode == constant.RelayModeGeminiInteractions {
+		requestURL := fmt.Sprintf("%s/%s/interactions", info.ChannelBaseUrl, version)
+		if info.IsStream {
+			requestURL += "?alt=sse"
+			info.DisablePing = true
+		}
+		return requestURL, nil
+	}
 
 	if strings.HasPrefix(info.UpstreamModelName, "imagen") {
 		return fmt.Sprintf("%s/%s/models/%s:predict", info.ChannelBaseUrl, version, info.UpstreamModelName), nil
@@ -255,6 +263,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
+	if info.RelayMode == constant.RelayModeGeminiInteractions {
+		if info.IsStream {
+			return GeminiInteractionsStreamHandler(c, info, resp)
+		}
+		return GeminiInteractionsHandler(c, info, resp)
+	}
+
 	if info.RelayMode == constant.RelayModeResponses {
 		if info.IsStream {
 			return GeminiResponsesStreamHandler(c, info, resp)

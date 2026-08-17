@@ -203,6 +203,70 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	return nil
 }
 
+// GeminiInteractionsHelper proxies Google's Interactions API without converting
+// its multimodal input or output schema. The API evolves independently from
+// generateContent, so conversion would otherwise discard newly introduced
+// input parts such as images, audio, and video.
+func GeminiInteractionsHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
+	info.InitChannelMeta(c)
+
+	request, ok := info.Request.(*dto.GeminiInteractionsRequest)
+	if !ok {
+		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected *dto.GeminiInteractionsRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
+	if info.ApiType != constant.APITypeGemini {
+		return types.NewErrorWithStatusCode(fmt.Errorf("Gemini Interactions API is only supported by Gemini channels"), types.ErrorCodeInvalidApiType, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
+
+	if err := helper.ModelMappedHelper(c, info, request); err != nil {
+		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
+	}
+
+	adaptor := GetAdaptor(info.ApiType)
+	if adaptor == nil {
+		return types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
+	}
+	adaptor.Init(info)
+
+	jsonData, err := common.Marshal(request)
+	if err != nil {
+		return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+	}
+	if len(info.ParamOverride) > 0 {
+		jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
+		if err != nil {
+			return newAPIErrorFromParamOverride(err)
+		}
+	}
+	logger.LogDebug(c, "Gemini interactions request body: %s", jsonData)
+
+	requestBody, closer, err := relaycommon.NewOutboundJSONBody(jsonData)
+	if err != nil {
+		return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+	}
+	defer closer.Close()
+
+	resp, err := adaptor.DoRequest(c, info, requestBody)
+	if err != nil {
+		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
+	}
+	httpResp := resp.(*http.Response)
+	info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
+	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices {
+		newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+		service.ResetStatusCode(newAPIError, c.GetString("status_code_mapping"))
+		return newAPIError
+	}
+
+	usage, newAPIError := adaptor.DoResponse(c, httpResp, info)
+	if newAPIError != nil {
+		service.ResetStatusCode(newAPIError, c.GetString("status_code_mapping"))
+		return newAPIError
+	}
+	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
+	return nil
+}
+
 func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 

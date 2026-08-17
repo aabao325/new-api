@@ -60,7 +60,9 @@ func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.NewAPIErro
 
 func geminiRelayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.NewAPIError {
 	var err *types.NewAPIError
-	if strings.Contains(c.Request.URL.Path, "embed") {
+	if info.RelayMode == relayconstant.RelayModeGeminiInteractions {
+		err = relay.GeminiInteractionsHelper(c, info)
+	} else if strings.Contains(c.Request.URL.Path, "embed") {
 		err = relay.GeminiEmbeddingHandler(c, info)
 	} else {
 		err = relay.GeminiHelper(c, info)
