@@ -135,6 +135,7 @@ func getLocalPricingSyncData() map[string]any {
 	data := billing_setting.GetPricingSyncData(map[string]any(ratio_setting.GetExposedData()))
 	data["image_ratio"] = ratio_setting.GetImageRatioCopy()
 	data["image_output_ratio"] = ratio_setting.GetImageOutputRatioCopy()
+	data["video_output_ratio"] = ratio_setting.GetVideoOutputRatioCopy()
 	data["audio_ratio"] = ratio_setting.GetAudioRatioCopy()
 	data["audio_completion_ratio"] = ratio_setting.GetAudioCompletionRatioCopy()
 	return data
@@ -389,6 +390,7 @@ func FetchUpstreamRatios(c *gin.Context) {
 				CreateCacheRatio     *float64 `json:"create_cache_ratio"`
 				ImageRatio           *float64 `json:"image_ratio"`
 				ImageOutputRatio     *float64 `json:"image_output_ratio"`
+				VideoOutputRatio     *float64 `json:"video_output_ratio"`
 				AudioRatio           *float64 `json:"audio_ratio"`
 				AudioCompletionRatio *float64 `json:"audio_completion_ratio"`
 				BillingMode          string   `json:"billing_mode"`

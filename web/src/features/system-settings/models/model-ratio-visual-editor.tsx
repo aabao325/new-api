@@ -74,6 +74,7 @@ type ModelRatioVisualEditorProps = {
   savedCompletionRatio: string
   savedImageRatio: string
   savedImageOutputRatio: string
+  savedVideoOutputRatio: string
   savedAudioRatio: string
   savedAudioCompletionRatio: string
   savedBillingMode: string
@@ -85,6 +86,7 @@ type ModelRatioVisualEditorProps = {
   completionRatio: string
   imageRatio: string
   imageOutputRatio: string,
+  videoOutputRatio: string,
   audioRatio: string
   audioCompletionRatio: string
   billingMode: string
@@ -115,6 +117,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     savedCompletionRatio,
     savedImageRatio,
     savedImageOutputRatio,
+    savedVideoOutputRatio,
     savedAudioRatio,
     savedAudioCompletionRatio,
     savedBillingMode,
@@ -126,6 +129,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     completionRatio,
     imageRatio,
     imageOutputRatio,
+    videoOutputRatio,
     audioRatio,
     audioCompletionRatio,
     billingMode,
@@ -164,6 +168,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
               createCacheRatio: false,
               imageRatio: false,
               imageOutputRatio: false,
+              videoOutputRatio: false,
               audioRatio: false,
               audioCompletionRatio: false,
             },
@@ -175,6 +180,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
             createCacheRatio: false,
             imageRatio: false,
             imageOutputRatio: false,
+            videoOutputRatio: false,
             audioRatio: false,
             audioCompletionRatio: false,
           }
@@ -185,6 +191,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
         createCacheRatio: false,
         imageRatio: false,
         imageOutputRatio: false,
+        videoOutputRatio: false,
         audioRatio: false,
         audioCompletionRatio: false,
       }
@@ -204,6 +211,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       completionRatio: savedCompletionRatio,
       imageRatio: savedImageRatio,
       imageOutputRatio: savedImageOutputRatio,
+      videoOutputRatio: savedVideoOutputRatio,
       audioRatio: savedAudioRatio,
       audioCompletionRatio: savedAudioCompletionRatio,
       billingMode: savedBillingMode,
@@ -217,6 +225,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       completionRatio,
       imageRatio,
       imageOutputRatio,
+      videoOutputRatio,
       audioRatio,
       audioCompletionRatio,
       billingMode,
@@ -261,6 +270,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     savedCompletionRatio,
     savedImageRatio,
     savedImageOutputRatio,
+    savedVideoOutputRatio,
     savedAudioRatio,
     savedAudioCompletionRatio,
     savedBillingMode,
@@ -272,6 +282,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     completionRatio,
     imageRatio,
     imageOutputRatio,
+    videoOutputRatio,
     audioRatio,
     audioCompletionRatio,
     billingMode,
@@ -317,6 +328,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
         completionRatio: editableModel.completionRatio,
         imageRatio: editableModel.imageRatio,
         imageOutputRatio: editableModel.imageOutputRatio,
+        videoOutputRatio: editableModel.videoOutputRatio,
         audioRatio: editableModel.audioRatio,
         audioCompletionRatio: editableModel.audioCompletionRatio,
         billingMode: editBillingMode,
@@ -380,6 +392,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
           fallback: {},
           silent: true,
       })
+      const videoOutputMap = safeJsonParse<Record<string, number>>(videoOutputRatio, {
+          fallback: {},
+          silent: true,
+      })
       const audioMap = safeJsonParse<Record<string, number>>(audioRatio, {
         fallback: {},
         silent: true,
@@ -415,6 +431,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       onChange('CompletionRatio', JSON.stringify(completionMap, null, 2))
       onChange('ImageRatio', JSON.stringify(imageMap, null, 2))
       onChange('ImageOutputRatio', JSON.stringify(imageOutputMap, null, 2))
+      onChange('VideoOutputRatio', JSON.stringify(videoOutputMap, null, 2))
       onChange('AudioRatio', JSON.stringify(audioMap, null, 2))
       onChange(
         'AudioCompletionRatio',
@@ -443,6 +460,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       completionRatio,
       imageRatio,
       imageOutputRatio,
+      videoOutputRatio,
       audioRatio,
       audioCompletionRatio,
       billingMode,
@@ -526,6 +544,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
           fallback: {},
           silent: true,
       })
+      const videoOutputMap = safeJsonParse<Record<string, number>>(videoOutputRatio, {
+          fallback: {},
+          silent: true,
+      })
       const audioMap = safeJsonParse<Record<string, number>>(audioRatio, {
         fallback: {},
         silent: true,
@@ -585,6 +607,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
           setIfPresent(completionMap, name, data.completionRatio)
           setIfPresent(imageMap, name, data.imageRatio)
           setIfPresent(imageOutputMap, name, data.imageOutputRatio)
+          setIfPresent(videoOutputMap, name, data.videoOutputRatio)
           setIfPresent(audioMap, name, data.audioRatio)
           setIfPresent(audioCompletionMap, name, data.audioCompletionRatio)
         } else if (data.price && data.price !== '') {
@@ -596,6 +619,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
           setIfPresent(completionMap, name, data.completionRatio)
           setIfPresent(imageMap, name, data.imageRatio)
           setIfPresent(imageOutputMap, name, data.imageOutputRatio)
+          setIfPresent(videoOutputMap, name, data.videoOutputRatio)
           setIfPresent(audioMap, name, data.audioRatio)
           setIfPresent(audioCompletionMap, name, data.audioCompletionRatio)
         }
@@ -608,6 +632,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       onChange('CompletionRatio', JSON.stringify(completionMap, null, 2))
       onChange('ImageRatio', JSON.stringify(imageMap, null, 2))
       onChange('ImageOutputRatio', JSON.stringify(imageOutputMap, null, 2))
+      onChange('VideoOutputRatio', JSON.stringify(videoOutputMap, null, 2))
       onChange('AudioRatio', JSON.stringify(audioMap, null, 2))
       onChange(
         'AudioCompletionRatio',
@@ -630,6 +655,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       completionRatio,
       imageRatio,
       imageOutputRatio,
+      videoOutputRatio,
       audioRatio,
       audioCompletionRatio,
       billingMode,
@@ -874,6 +900,7 @@ export const ModelRatioVisualEditor = memo(
       prevProps.completionRatio === nextProps.completionRatio &&
       prevProps.imageRatio === nextProps.imageRatio &&
       prevProps.imageOutputRatio === nextProps.imageOutputRatio &&
+      prevProps.videoOutputRatio === nextProps.videoOutputRatio &&
       prevProps.audioRatio === nextProps.audioRatio &&
       prevProps.audioCompletionRatio === nextProps.audioCompletionRatio &&
       prevProps.billingMode === nextProps.billingMode &&

@@ -49,6 +49,8 @@ var compileEnvPrototypeV1 = map[string]interface{}{
 	"img_o":   float64(0),
 	"ai":      float64(0),
 	"ao":      float64(0),
+	"vid":     float64(0),
+	"vid_o":   float64(0),
 	"tier":    func(string, float64) float64 { return 0 },
 	"header":  func(string) string { return "" },
 	"param":   func(string) interface{} { return nil },

@@ -1061,3 +1061,90 @@ func TestAppendToolSurchargeLogInfoWritesOnlyStructuredFields(t *testing.T) {
 	assert.NotContains(t, other, "image_generation_call")
 	assert.NotContains(t, other, "image_generation_call_price")
 }
+
+// TestCalculateTextQuotaSummaryPricesVideoOutputSeparately covers the Gemini
+// Omni case: video output costs far more per token than text output, so it must
+// be removed from the text completion charge and billed at VideoOutputRatio.
+func TestCalculateTextQuotaSummaryPricesVideoOutputSeparately(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+
+	usage := &dto.Usage{
+		PromptTokens:     1000,
+		CompletionTokens: 500,
+		PromptTokensDetails: dto.InputTokenDetails{
+			TextTokens:  200,
+			VideoTokens: 800,
+		},
+		CompletionTokenDetails: dto.OutputTokenDetails{
+			TextTokens:  100,
+			VideoTokens: 400,
+		},
+	}
+
+	relayInfo := &relaycommon.RelayInfo{
+		RelayFormat:             types.RelayFormatOpenAI,
+		FinalRequestRelayFormat: types.RelayFormatOpenAI,
+		OriginModelName:         "gemini-omni-flash-preview",
+		PriceData: hosttypes.PriceData{
+			ModelRatio:       2,
+			CompletionRatio:  3,
+			VideoOutputRatio: 10,
+			GroupRatioInfo: hosttypes.GroupRatioInfo{
+				GroupRatio: 1,
+			},
+		},
+		StartTime: time.Now(),
+	}
+
+	summary := calculateTextQuotaSummary(ctx, relayInfo, usage)
+
+	// prompt 1000 + text output (500-400)*3 = 300 + video output 400*10 = 4000
+	// total 5300, times model ratio 2 = 10600
+	assert.Equal(t, 10600, summary.Quota)
+	assert.Equal(t, 400, summary.VideoOutputTokens)
+	assert.Equal(t, 800, summary.VideoTokens)
+}
+
+// TestCalculateTextQuotaSummaryVideoOutputNeverCredits guards the billing
+// invariant: overlapping reasoning and video counts must not drive the text
+// completion charge negative and hand the user a credit.
+func TestCalculateTextQuotaSummaryVideoOutputNeverCredits(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+
+	usage := &dto.Usage{
+		PromptTokens:     10,
+		CompletionTokens: 100,
+		CompletionTokenDetails: dto.OutputTokenDetails{
+			ReasoningTokens: 90,
+			ImageTokens:     40,
+			VideoTokens:     80,
+		},
+	}
+
+	relayInfo := &relaycommon.RelayInfo{
+		RelayFormat:             types.RelayFormatOpenAI,
+		FinalRequestRelayFormat: types.RelayFormatOpenAI,
+		OriginModelName:         "gemini-omni-flash-preview",
+		PriceData: hosttypes.PriceData{
+			ModelRatio:       1,
+			CompletionRatio:  4,
+			ImageOutputRatio: 5,
+			VideoOutputRatio: 7,
+			GroupRatioInfo: hosttypes.GroupRatioInfo{
+				GroupRatio: 1,
+			},
+		},
+		StartTime: time.Now(),
+	}
+
+	summary := calculateTextQuotaSummary(ctx, relayInfo, usage)
+
+	// 100 - 40 - 80 would be negative; text output clamps to 0.
+	// prompt 10 + image 40*5 = 200 + video 80*7 = 560 => 770
+	assert.Equal(t, 770, summary.Quota)
+	assert.GreaterOrEqual(t, summary.Quota, 0)
+}

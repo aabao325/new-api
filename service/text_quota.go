@@ -48,6 +48,8 @@ type textQuotaSummary struct {
 	CacheCreationTokens1h  int
 	ImageTokens            int
 	ImageOutputTokens      int
+	VideoTokens            int
+	VideoOutputTokens      int
 	AudioTokens            int
 	ModelName              string
 	TokenName              string
@@ -56,6 +58,7 @@ type textQuotaSummary struct {
 	CacheRatio             float64
 	ImageRatio             float64
 	ImageOutputRatio       float64
+	VideoOutputRatio       float64
 	ModelRatio             float64
 	GroupRatio             float64
 	ModelPrice             float64
@@ -239,6 +242,7 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 		CacheRatio:           relayInfo.PriceData.CacheRatio,
 		ImageRatio:           relayInfo.PriceData.ImageRatio,
 		ImageOutputRatio:     relayInfo.PriceData.ImageOutputRatio,
+		VideoOutputRatio:     relayInfo.PriceData.VideoOutputRatio,
 		ModelRatio:           relayInfo.PriceData.ModelRatio,
 		GroupRatio:           relayInfo.PriceData.GroupRatioInfo.GroupRatio,
 		ModelPrice:           relayInfo.PriceData.ModelPrice,
@@ -266,6 +270,8 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 	summary.CacheCreationTokens1h = usage.ClaudeCacheCreation1hTokens
 	summary.ImageTokens = usage.PromptTokensDetails.ImageTokens
 	summary.ImageOutputTokens = usage.CompletionTokenDetails.ImageTokens
+	summary.VideoTokens = usage.PromptTokensDetails.VideoTokens
+	summary.VideoOutputTokens = usage.CompletionTokenDetails.VideoTokens
 	summary.AudioTokens = usage.PromptTokensDetails.AudioTokens
 	legacyClaudeDerived := isLegacyClaudeDerivedOpenAIUsage(relayInfo, usage)
 	isOpenRouterClaudeBilling := relayInfo.ChannelMeta != nil &&
@@ -288,6 +294,7 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 	dCacheTokens := decimal.NewFromInt(int64(summary.CacheTokens))
 	dImageTokens := decimal.NewFromInt(int64(summary.ImageTokens))
 	dImageOutputTokens := decimal.NewFromInt(int64(summary.ImageOutputTokens))
+	dVideoOutputTokens := decimal.NewFromInt(int64(summary.VideoOutputTokens))
 	dAudioTokens := decimal.NewFromInt(int64(summary.AudioTokens))
 	dCompletionTokens := decimal.NewFromInt(int64(summary.CompletionTokens))
 	dCachedCreationTokens := decimal.NewFromInt(int64(summary.CacheCreationTokens))
@@ -295,6 +302,7 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 	dCacheRatio := decimal.NewFromFloat(summary.CacheRatio)
 	dImageRatio := decimal.NewFromFloat(summary.ImageRatio)
 	dImageOutputRatio := decimal.NewFromFloat(summary.ImageOutputRatio)
+	dVideoOutputRatio := decimal.NewFromFloat(summary.VideoOutputRatio)
 	dModelRatio := decimal.NewFromFloat(summary.ModelRatio)
 	dGroupRatio := decimal.NewFromFloat(summary.GroupRatio)
 	dModelPrice := decimal.NewFromFloat(summary.ModelPrice)
@@ -364,8 +372,21 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 			dCompletionTokens = dCompletionTokens.Sub(dImageOutputTokens)
 			imageOutputQuota = dImageOutputTokens.Mul(dImageOutputRatio)
 		}
+		// Video output is priced far above text output (Gemini Omni: $17.50/M
+		// vs $9/M), so it is removed from the text completion charge and billed
+		// at its own ratio.
+		videoOutputQuota := decimal.Zero
+		if !dVideoOutputRatio.IsZero() && !dVideoOutputTokens.IsZero() {
+			dCompletionTokens = dCompletionTokens.Sub(dVideoOutputTokens)
+			videoOutputQuota = dVideoOutputTokens.Mul(dVideoOutputRatio)
+		}
+		// Reasoning tokens can overlap the modality breakdown; never let the
+		// remaining text output go negative and credit the user.
+		if dCompletionTokens.IsNegative() {
+			dCompletionTokens = decimal.Zero
+		}
 		completionQuota := dCompletionTokens.Mul(dCompletionRatio)
-		quotaCalculateDecimal := promptQuota.Add(completionQuota).Add(imageOutputQuota).Mul(ratio)
+		quotaCalculateDecimal := promptQuota.Add(completionQuota).Add(imageOutputQuota).Add(videoOutputQuota).Mul(ratio)
 		quotaCalculateDecimal = quotaCalculateDecimal.Add(audioInputQuota)
 		quotaCalculateDecimal = relayInfo.PriceData.ApplyOtherRatiosToDecimal(quotaCalculateDecimal)
 		quotaCalculateDecimal = quotaCalculateDecimal.Add(summary.ToolCallSurchargeQuota)
@@ -500,6 +521,14 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		other["image_output_cal"] = true
 		other["image_output_ratio"] = summary.ImageOutputRatio
 		other["image_output_tokens"] = summary.ImageOutputTokens
+	}
+	if summary.VideoTokens != 0 {
+		other["video_input_tokens"] = summary.VideoTokens
+	}
+	if summary.VideoOutputTokens != 0 {
+		other["video_output_cal"] = true
+		other["video_output_ratio"] = summary.VideoOutputRatio
+		other["video_output_tokens"] = summary.VideoOutputTokens
 	}
 	appendToolSurchargeLogInfo(other, summary.ToolSurchargeItems)
 	if summary.AudioInputPrice > 0 && summary.AudioTokens > 0 {

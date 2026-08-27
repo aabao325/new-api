@@ -341,6 +341,7 @@ func InitRatioSettings() {
 	createCacheRatioMap.AddAll(defaultCreateCacheRatio)
 	imageRatioMap.AddAll(defaultImageRatio)
 	imageOutputRatioMap.AddAll(defaultImageOutputRatio)
+	videoOutputRatioMap.AddAll(defaultVideoOutputRatio)
 	audioRatioMap.AddAll(defaultAudioRatio)
 	audioCompletionRatioMap.AddAll(defaultAudioCompletionRatio)
 }
@@ -663,8 +664,17 @@ var defaultImageOutputRatio = map[string]float64{
 	"gemini-3.1-flash-image-preview": 30,
 	"gemini-3.1-flash-image-lite":    15,
 }
+
+// defaultVideoOutputRatio prices video output tokens relative to the model
+// ratio. Gemini Omni bills video output at $17.50/M against a $1.50/M input
+// (model ratio 0.75), so 17.5 / 1.5 keeps the charge aligned with Google's
+// published pricing. Text output for the same model stays on CompletionRatio.
+var defaultVideoOutputRatio = map[string]float64{
+	"gemini-omni-flash-preview": 11.666667,
+}
 var imageRatioMap = types.NewRWMap[string, float64]()
 var imageOutputRatioMap = types.NewRWMap[string, float64]()
+var videoOutputRatioMap = types.NewRWMap[string, float64]()
 var audioRatioMap = types.NewRWMap[string, float64]()
 var audioCompletionRatioMap = types.NewRWMap[string, float64]()
 
@@ -698,6 +708,26 @@ func GetImageOutputRatio(name string) (float64, bool) {
 		return 1, false // Default to 1 if not found
 	}
 	return ratio, true
+}
+
+func VideoOutputRatio2JSONString() string {
+	return videoOutputRatioMap.MarshalJSONString()
+}
+
+func UpdateVideoOutputRatioByJSONString(jsonStr string) error {
+	return types.LoadFromJsonString(videoOutputRatioMap, jsonStr)
+}
+
+func GetVideoOutputRatio(name string) (float64, bool) {
+	ratio, ok := videoOutputRatioMap.Get(name)
+	if !ok {
+		return 1, false // Default to 1 if not found
+	}
+	return ratio, true
+}
+
+func GetVideoOutputRatioCopy() map[string]float64 {
+	return videoOutputRatioMap.ReadAll()
 }
 
 func AudioRatio2JSONString() string {

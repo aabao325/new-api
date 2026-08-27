@@ -86,6 +86,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	var cacheRatio float64
 	var imageRatio float64
 	var imageOutputRatio float64
+	var videoOutputRatio float64
 	var cacheCreationRatio float64
 	var cacheCreationRatio5m float64
 	var cacheCreationRatio1h float64
@@ -117,6 +118,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		cacheCreationRatio1h = cacheCreationRatio * claudeCacheCreation1hMultiplier
 		imageRatio, _ = ratio_setting.GetImageRatio(info.OriginModelName)
 		imageOutputRatio, _ = ratio_setting.GetImageOutputRatio(info.OriginModelName)
+		videoOutputRatio, _ = ratio_setting.GetVideoOutputRatio(info.OriginModelName)
 		audioRatio = ratio_setting.GetAudioRatio(info.OriginModelName)
 		audioCompletionRatio = ratio_setting.GetAudioCompletionRatio(info.OriginModelName)
 		ratio := modelRatio * groupRatioInfo.GroupRatio
@@ -160,6 +162,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		CacheRatio:           cacheRatio,
 		ImageRatio:           imageRatio,
 		ImageOutputRatio:     imageOutputRatio,
+		VideoOutputRatio:     videoOutputRatio,
 		AudioRatio:           audioRatio,
 		AudioCompletionRatio: audioCompletionRatio,
 		CacheCreationRatio:   cacheCreationRatio,

@@ -39,6 +39,7 @@ export type VisualTier = {
   cache_create_1h_unit_cost?: number
   image_unit_cost?: number
   image_output_unit_cost?: number
+  video_output_unit_cost?: number
   audio_input_unit_cost?: number
   audio_output_unit_cost?: number
   [field: string]: unknown
@@ -73,6 +74,7 @@ export function normalizeVisualTier(
     cache_create_1h_unit_cost: Number(tier.cache_create_1h_unit_cost) || 0,
     image_unit_cost: Number(tier.image_unit_cost) || 0,
     image_output_unit_cost: Number(tier.image_output_unit_cost) || 0,
+    video_output_unit_cost: Number(tier.video_output_unit_cost) || 0,
     audio_input_unit_cost: Number(tier.audio_input_unit_cost) || 0,
     audio_output_unit_cost: Number(tier.audio_output_unit_cost) || 0,
   }

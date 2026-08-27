@@ -264,6 +264,10 @@ type InputTokenDetails struct {
 	TextTokens       int `json:"text_tokens"`
 	AudioTokens      int `json:"audio_tokens"`
 	ImageTokens      int `json:"image_tokens"`
+	// VideoTokens is reported by multimodal models such as Gemini Omni. It is
+	// informational for input: providers price every input modality at the same
+	// rate today, so it is not deducted from the text base like image/audio are.
+	VideoTokens int `json:"video_tokens,omitempty"`
 }
 
 // CacheCreationTokensTotal returns the cache-write token count regardless of
@@ -288,6 +292,10 @@ type OutputTokenDetails struct {
 	AudioTokens     int `json:"audio_tokens"`
 	ImageTokens     int `json:"image_tokens"`
 	ReasoningTokens int `json:"reasoning_tokens"`
+	// VideoTokens carries video output tokens (Gemini Omni). Providers price
+	// video output well above text output, so it is billed separately via
+	// VideoOutputRatio instead of falling into the text completion charge.
+	VideoTokens int `json:"video_tokens,omitempty"`
 }
 
 type OpenAIResponsesResponse struct {

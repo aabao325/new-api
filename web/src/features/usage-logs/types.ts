@@ -198,6 +198,12 @@ export interface LogOtherData {
   image_ratio?: number
   image_output?: number
   image_output_ratio?: number
+  image_output_cal?: boolean
+  image_output_tokens?: number
+  video_input_tokens?: number
+  video_output_cal?: boolean
+  video_output_ratio?: number
+  video_output_tokens?: number
   web_search?: boolean
   web_search_call_count?: number
   web_search_price?: number

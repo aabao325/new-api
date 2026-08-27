@@ -315,6 +315,7 @@ export function ModelMutateDrawer({
       CompletionRatio: '',
       ImageRatio: '',
       ImageOutputRatio: '',
+      VideoOutputRatio: '',
       AudioRatio: '',
       AudioCompletionRatio: '',
       ExposeRatioEnabled: false,

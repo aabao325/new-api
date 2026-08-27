@@ -63,6 +63,8 @@ func runProgram(prog *vm.Program, params TokenParams, request RequestInput) (flo
 		"img_o": params.ImgO,
 		"ai":    params.AI,
 		"ao":    params.AO,
+		"vid":   params.Vid,
+		"vid_o": params.VidO,
 		"tier": func(name string, value float64) float64 {
 			trace.MatchedTier = name
 			trace.Cost = value
