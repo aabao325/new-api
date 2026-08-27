@@ -38,6 +38,8 @@ func BuildTieredTokenParams(usage *dto.Usage, isClaudeUsageSemantic bool, usedVa
 	ai := float64(usage.PromptTokensDetails.AudioTokens)
 	imgO := float64(usage.CompletionTokenDetails.ImageTokens)
 	ao := float64(usage.CompletionTokenDetails.AudioTokens)
+	vid := float64(usage.PromptTokensDetails.VideoTokens)
+	vidO := float64(usage.CompletionTokenDetails.VideoTokens)
 
 	// len = total input context length for tier condition evaluation.
 	// Non-Claude: prompt_tokens already includes everything.
@@ -69,6 +71,12 @@ func BuildTieredTokenParams(usage *dto.Usage, isClaudeUsageSemantic bool, usedVa
 		if usedVars["ao"] {
 			c -= ao
 		}
+		if usedVars["vid"] {
+			p -= vid
+		}
+		if usedVars["vid_o"] {
+			c -= vidO
+		}
 	}
 
 	// OpenAI cache-write usage reports unadjusted prefix counts, so cr + cc can
@@ -91,6 +99,8 @@ func BuildTieredTokenParams(usage *dto.Usage, isClaudeUsageSemantic bool, usedVa
 		ImgO: imgO,
 		AI:   ai,
 		AO:   ao,
+		Vid:  vid,
+		VidO: vidO,
 	}
 }
 

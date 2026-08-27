@@ -44,6 +44,7 @@ export type PricingModel = {
   create_cache_ratio?: number | null
   image_ratio?: number | null
   image_output_ratio?: number | null
+  video_output_ratio?: number | null
   audio_ratio?: number | null
   audio_completion_ratio?: number | null
   enable_groups: string[]
@@ -108,6 +109,7 @@ export type PriceType =
   | 'create_cache'
   | 'image'
   | 'image_output'
+  | 'video_output'
   | 'audio_input'
   | 'audio_output'
 export type QuotaType = 0 | 1 // 0: token-based, 1: per-request

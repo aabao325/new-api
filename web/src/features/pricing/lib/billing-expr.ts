@@ -118,6 +118,15 @@ export const BILLING_VARS: BillingVar[] = [
     group: 'media',
   },
   {
+    key: 'vid_o',
+    field: 'videoOutputPrice',
+    tierField: 'video_output_unit_cost',
+    label: 'Video output price',
+    shortLabel: 'Video Out',
+    side: 'output',
+    group: 'media',
+  },
+  {
     key: 'ai',
     field: 'audioInputPrice',
     tierField: 'audio_input_unit_cost',

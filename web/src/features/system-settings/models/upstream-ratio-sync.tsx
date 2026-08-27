@@ -75,6 +75,7 @@ type UpstreamRatioSyncProps = {
     CreateCacheRatio: string
     ImageRatio: string
     ImageOutputRatio: string
+    VideoOutputRatio: string
     AudioRatio: string
     AudioCompletionRatio: string
     'billing_setting.billing_mode': string
@@ -298,6 +299,7 @@ export function UpstreamRatioSync({ modelRatios }: UpstreamRatioSyncProps) {
       CreateCacheRatio: parseJsonRecord<number>(modelRatios.CreateCacheRatio),
       ImageRatio: parseJsonRecord<number>(modelRatios.ImageRatio),
       ImageOutputRatio: parseJsonRecord<number>(modelRatios.ImageOutputRatio),
+      VideoOutputRatio: parseJsonRecord<number>(modelRatios.VideoOutputRatio),
       AudioRatio: parseJsonRecord<number>(modelRatios.AudioRatio),
       AudioCompletionRatio: parseJsonRecord<number>(
         modelRatios.AudioCompletionRatio

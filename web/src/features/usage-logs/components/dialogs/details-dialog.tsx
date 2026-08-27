@@ -495,6 +495,20 @@ function TokenBreakdown(props: { log: UsageLog; other: LogOtherData }) {
     })
   }
 
+  if (other.video_input_tokens) {
+    rows.push({
+      label: t('Video Input Tokens'),
+      value: other.video_input_tokens.toLocaleString(),
+    })
+  }
+
+  if (other.video_output_cal && other.video_output_tokens) {
+    rows.push({
+      label: t('Video Output Tokens'),
+      value: other.video_output_tokens.toLocaleString(),
+    })
+  }
+
   return (
     <DetailSection label={t('Token Breakdown')}>
       {rows.map((row) => (
