@@ -179,8 +179,15 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	}
 
 	if !containStreamUsage {
-		usage = service.ResponseText2Usage(c, responseTextBuilder.String(), info.UpstreamModelName, info.GetEstimatePromptTokens())
-		usage.CompletionTokens += toolCount * 7
+		// 流在拿到任何数据帧之前就异常结束（客户端断连、上游超时等）时，客户端没有收到
+		// 任何输出，此时不能用本地估算的 prompt tokens 计费：估算值可能远大于上游真实
+		// 用量，且缓存命中信息完全丢失。保持零 usage，由结算层的零扣费保护退还预扣额度。
+		if info.ReceivedResponseCount == 0 && !info.StreamStatus.IsNormalEnd() {
+			usage = &dto.Usage{}
+		} else {
+			usage = service.ResponseText2Usage(c, responseTextBuilder.String(), info.UpstreamModelName, info.GetEstimatePromptTokens())
+			usage.CompletionTokens += toolCount * 7
+		}
 	}
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(lastStreamData))
