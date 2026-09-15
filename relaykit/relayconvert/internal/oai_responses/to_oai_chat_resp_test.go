@@ -588,3 +588,64 @@ func mustStreamChunks(t *testing.T, state *ResponsesToChatStreamState, event *dt
 	require.NoError(t, err)
 	return chunks
 }
+
+func TestNormalizeResponsesUsageMapsOutputTokensDetails(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		src      dto.Usage
+		expected dto.OutputTokenDetails
+	}{
+		{
+			name: "responses output_tokens_details",
+			src: dto.Usage{
+				InputTokens:  25,
+				OutputTokens: 215,
+				TotalTokens:  240,
+				OutputTokensDetails: &dto.OutputTokenDetails{
+					ReasoningTokens: 128,
+					TextTokens:      87,
+				},
+			},
+			expected: dto.OutputTokenDetails{ReasoningTokens: 128, TextTokens: 87},
+		},
+		{
+			name: "chat completion_tokens_details fallback",
+			src: dto.Usage{
+				InputTokens:            25,
+				OutputTokens:           215,
+				TotalTokens:            240,
+				CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 64},
+			},
+			expected: dto.OutputTokenDetails{ReasoningTokens: 64},
+		},
+		{
+			name: "output_tokens_details wins over completion_tokens_details",
+			src: dto.Usage{
+				InputTokens:            25,
+				OutputTokens:           215,
+				TotalTokens:            240,
+				CompletionTokenDetails: dto.OutputTokenDetails{ReasoningTokens: 64},
+				OutputTokensDetails:    &dto.OutputTokenDetails{ReasoningTokens: 128},
+			},
+			expected: dto.OutputTokenDetails{ReasoningTokens: 128},
+		},
+		{
+			name: "explicit zero reasoning is preserved",
+			src: dto.Usage{
+				InputTokens:         25,
+				OutputTokens:        215,
+				TotalTokens:         240,
+				OutputTokensDetails: &dto.OutputTokenDetails{ReasoningTokens: 0, TextTokens: 215},
+			},
+			expected: dto.OutputTokenDetails{ReasoningTokens: 0, TextTokens: 215},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			usage := NormalizeResponsesUsage(&tc.src)
+			require.NotNil(t, usage)
+			assert.Equal(t, tc.expected, usage.CompletionTokenDetails)
+			assert.Equal(t, 215, usage.CompletionTokens)
+			assert.Equal(t, 240, usage.TotalTokens)
+		})
+	}
+}
