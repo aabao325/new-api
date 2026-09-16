@@ -84,16 +84,46 @@ func TestProcessChannelErrorUsesSnapshotWithoutLeakingChannelMetadata(t *testing
 	require.True(t, ok)
 	assert.Equal(t, []any{"101"}, adminInfo["use_channel"])
 
-	logs, total, err := model.GetUserLogs(7, model.LogTypeError, 0, 0, "", "", 0, 10, "", "", "")
+	// 对照日志：同一用户、同一令牌下的消费日志。用来证明过滤只排除错误日志，
+	// 而不是把整个查询结果清空。
+	require.NoError(t, database.Create(&model.Log{
+		UserId:    7,
+		Username:  "log-owner",
+		CreatedAt: common.GetTimestamp(),
+		Type:      model.LogTypeConsume,
+		TokenName: "test-token",
+		TokenId:   11,
+		ModelName: "gpt-test",
+		Group:     "default",
+	}).Error)
+
+	// 用户按"错误"类型查 → 查不到。
+	errorTypeLogs, errorTypeTotal, err := model.GetUserLogs(7, model.LogTypeError, 0, 0, "", "", 0, 10, "", "", "")
 	require.NoError(t, err)
-	require.Equal(t, int64(1), total)
-	require.Len(t, logs, 1)
-	assert.Equal(t, channelSnapshot.ChannelId, logs[0].ChannelId)
-	assert.Empty(t, logs[0].ChannelName)
-	userOther, err := common.StrToMap(logs[0].Other)
+	assert.Zero(t, errorTypeTotal)
+	assert.Empty(t, errorTypeLogs)
+
+	// 用户选"全部类型"（LogTypeUnknown，此时后端不附加类型条件）→ 结果里也不能有错误日志。
+	// 这是本次改动的核心回归点：过滤必须落在查询上，只在 controller 拦 type=5 挡不住这条路径。
+	allTypeLogs, allTypeTotal, err := model.GetUserLogs(7, model.LogTypeUnknown, 0, 0, "", "", 0, 10, "", "", "")
 	require.NoError(t, err)
-	assert.NotContains(t, userOther, "admin_info")
-	for _, key := range []string{"channel_id", "channel_name", "channel_type"} {
-		assert.NotContains(t, userOther, key)
-	}
+	require.Equal(t, int64(1), allTypeTotal)
+	require.Len(t, allTypeLogs, 1)
+	assert.Equal(t, model.LogTypeConsume, allTypeLogs[0].Type)
+
+	// 令牌鉴权的自查接口（/api/log/token）是另一个入口，同样不能返回错误日志。
+	tokenLogs, err := model.GetLogByTokenId(11)
+	require.NoError(t, err)
+	require.Len(t, tokenLogs, 1)
+	assert.Equal(t, model.LogTypeConsume, tokenLogs[0].Type)
+
+	// 管理员侧不受影响：错误日志仍在库里，admin_info 完整。
+	// 这里直接查库而不走 GetAllLogs，因为后者会查 channels 表，本测试未迁移该表。
+	var adminVisible []model.Log
+	require.NoError(t, database.Where("type = ?", model.LogTypeError).Find(&adminVisible).Error)
+	require.Len(t, adminVisible, 1)
+	assert.Equal(t, channelSnapshot.ChannelId, adminVisible[0].ChannelId)
+	adminVisibleOther, err := common.StrToMap(adminVisible[0].Other)
+	require.NoError(t, err)
+	assert.Contains(t, adminVisibleOther, "admin_info")
 }

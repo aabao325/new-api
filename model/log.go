@@ -142,7 +142,8 @@ func GetLogByTokenId(tokenId int) (logs []*Log, err error) {
 	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
 		order = clickHouseLogOrder("")
 	}
-	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order(order).Limit(common.MaxRecentItems).Find(&logs).Error
+	// 错误日志仅管理员可见，令牌鉴权的自查接口同样排除。
+	err = LOG_DB.Model(&Log{}).Where("token_id = ? and type <> ?", tokenId, LogTypeError).Order(order).Limit(common.MaxRecentItems).Find(&logs).Error
 	formatUserLogs(logs, 0)
 	return logs, err
 }
@@ -564,6 +565,9 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	} else {
 		tx = LOG_DB.Where("logs.user_id = ? and logs.type = ?", userId, logType)
 	}
+	// 错误日志仅管理员可见（GetAllLogs）。此处必须在查询上排除，
+	// 因为 logType 为 LogTypeUnknown 时不带类型条件，错误日志会混入"全部类型"结果。
+	tx = tx.Where("logs.type <> ?", LogTypeError)
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
 		return nil, 0, err
