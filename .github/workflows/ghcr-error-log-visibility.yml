@@ -14,12 +14,12 @@ on:
       tag:
         description: 'Docker tag to publish (default: error-log-visibility)'
         required: false
-        default: 'error-log-visibility'
+        default: 'v1.0.0-rc.45-log'
         type: string
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/new-api
-  TAG: ${{ github.event.inputs.tag || 'error-log-visibility' }}
+  TAG: ${{ github.event.inputs.tag || 'v1.0.0-rc.45-log' }}
 
 jobs:
   build:

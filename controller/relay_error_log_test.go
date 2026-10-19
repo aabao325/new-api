@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -98,18 +99,27 @@ func TestProcessChannelErrorUsesSnapshotWithoutLeakingChannelMetadata(t *testing
 	}).Error)
 
 	// 用户按"错误"类型查 → 查不到。
-	errorTypeLogs, errorTypeTotal, err := model.GetUserLogs(7, model.LogTypeError, 0, 0, "", "", 0, 10, "", "", "")
+	errorTypeLogs, errorTypeTotal, err := model.GetUserLogs(7, model.LogFilter{Type: model.LogTypeError}, 0, 10)
 	require.NoError(t, err)
 	assert.Zero(t, errorTypeTotal)
 	assert.Empty(t, errorTypeLogs)
 
 	// 用户选"全部类型"（LogTypeUnknown，此时后端不附加类型条件）→ 结果里也不能有错误日志。
 	// 这是本次改动的核心回归点：过滤必须落在查询上，只在 controller 拦 type=5 挡不住这条路径。
-	allTypeLogs, allTypeTotal, err := model.GetUserLogs(7, model.LogTypeUnknown, 0, 0, "", "", 0, 10, "", "", "")
+	allTypeLogs, allTypeTotal, err := model.GetUserLogs(7, model.LogFilter{Type: model.LogTypeUnknown}, 0, 10)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), allTypeTotal)
 	require.Len(t, allTypeLogs, 1)
 	assert.Equal(t, model.LogTypeConsume, allTypeLogs[0].Type)
+
+	// 用户导出（/api/log/self/export）走独立的流式入口，同样不能带出错误日志。
+	var exported []model.Log
+	require.NoError(t, model.StreamUserLogs(context.Background(), 7, model.LogFilter{Type: model.LogTypeUnknown}, func(log *model.Log) error {
+		exported = append(exported, *log)
+		return nil
+	}))
+	require.Len(t, exported, 1)
+	assert.Equal(t, model.LogTypeConsume, exported[0].Type)
 
 	// 令牌鉴权的自查接口（/api/log/token）是另一个入口，同样不能返回错误日志。
 	tokenLogs, err := model.GetLogByTokenId(11)

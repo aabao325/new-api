@@ -1,11 +1,14 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/QuantumNous/new-api/common"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/relayconvert"
+	"github.com/QuantumNous/new-api/tokenkit"
 )
 
 // ResponsesUsageAccumulator owns the accounting facts for one Responses stream.
@@ -18,6 +21,7 @@ type ResponsesUsageAccumulator struct {
 	outputText     strings.Builder
 	imageCounter   relaycommon.ImageGenerationCallCounter
 	imageCommitted bool
+	started        bool
 	finished       bool
 }
 
@@ -25,29 +29,46 @@ func NewResponsesUsageAccumulator(info *relaycommon.RelayInfo) *ResponsesUsageAc
 	return &ResponsesUsageAccumulator{info: info, usage: &dto.Usage{}}
 }
 
-func (a *ResponsesUsageAccumulator) Observe(event *dto.ResponsesStreamResponse) {
+// Observe feeds one decoded stream event. raw is the same event's wire bytes;
+// the vendor tool-usage reader runs on it once, at the terminal event.
+func (a *ResponsesUsageAccumulator) Observe(event *dto.ResponsesStreamResponse, raw []byte) {
 	if a == nil || event == nil || a.finished {
 		return
 	}
+	if event.Response != nil {
+		a.info.ObserveResponseModel(event.Response.Model)
+	}
+	a.started = true
+	ObserveResponsesOutcome(a.info, event)
 	switch event.Type {
 	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled":
 		if event.Response != nil {
 			ApplyResponsesUsage(a.usage, event.Response.Usage)
+			if a.outputText.Len() == 0 {
+				// Some upstreams carry the output only on the terminal event.
+				a.outputText.WriteString(relayconvert.ExtractOutputTextFromResponses(event.Response))
+			}
 		}
+		// Vendor counts are cumulative on the terminal event and replace the
+		// web_search_call items counted from output_item.done.
+		a.info.ApplyVendorToolUsage(raw)
 		if a.imageCommitted {
 			return
 		}
-		failed := event.Type != "response.completed" && event.Type != "response.done"
-		if failed || (event.Response != nil && relaycommon.IsNonBillableResponsesStatus(event.Response.Status)) {
-			a.imageCounter.Reset()
-		} else if event.Response != nil {
+		// Images that completed before any terminal, failed ones included,
+		// were delivered and stay billable; Observe still skips unfinished
+		// image items.
+		if event.Response != nil {
 			for i := range event.Response.Output {
 				a.imageCounter.Observe(&event.Response.Output[i], &i)
 			}
 		}
 		a.imageCounter.Commit(a.info)
 		a.imageCommitted = true
-	case "response.output_text.delta":
+	case "response.output_text.delta", "response.function_call_arguments.delta",
+		"response.reasoning_summary_text.delta", "response.reasoning_text.delta", "response.refusal.delta":
+		// Every delta kind here is generated output that upstream bills as
+		// output tokens, so all of them feed the missing-usage estimate.
 		a.outputText.WriteString(event.Delta)
 	case dto.ResponsesOutputTypeItemDone:
 		if event.Item == nil {
@@ -70,18 +91,21 @@ func (a *ResponsesUsageAccumulator) Finish() *dto.Usage {
 	}
 	a.finished = true
 	// A final image item can already have reached the client before the stream
-	// disconnects. Explicit failed/incomplete terminals reset and commit zero in
-	// Observe; otherwise retain completed tool usage even without a terminal.
+	// disconnects, so completed tool usage is retained even without a terminal.
 	if !a.imageCommitted {
 		a.imageCounter.Commit(a.info)
 		a.imageCommitted = true
 	}
 	if a.usage.CompletionTokens == 0 {
 		if output := a.outputText.String(); output != "" {
-			a.usage.CompletionTokens = CountTextToken(output, a.info.GetUpstreamModelName())
+			a.usage.CompletionTokens = tokenkit.Count(a.info.GetUpstreamModelName(), output)
 		}
 	}
-	if a.usage.PromptTokens == 0 && a.usage.CompletionTokens != 0 {
+	// Upstream bills the prompt as soon as it starts generating, so a stream
+	// that produced any event but no usage still owes its input tokens unless
+	// upstream reported an explicit failure.
+	billsPrompt := a.usage.CompletionTokens != 0 || (a.started && !a.info.StreamStatus.ResponseFailed())
+	if a.usage.PromptTokens == 0 && billsPrompt {
 		a.usage.PromptTokens = a.info.GetEstimatePromptTokens()
 	}
 	a.usage.TotalTokens = a.usage.PromptTokens + a.usage.CompletionTokens
@@ -89,6 +113,42 @@ func (a *ResponsesUsageAccumulator) Finish() *dto.Usage {
 		a.usage.BillingUsage = dto.CloneBillingUsageWithEstimatedCompletion(a.usage.BillingUsage, a.usage.CompletionTokens)
 	}
 	return a.usage
+}
+
+// ObserveResponsesOutcome records the protocol outcome of one Responses event
+// on the stream status for health classification. Only codes and types are
+// kept; messages never leave the event.
+func ObserveResponsesOutcome(info *relaycommon.RelayInfo, event *dto.ResponsesStreamResponse) {
+	if info == nil || info.StreamStatus == nil || event == nil {
+		return
+	}
+	var responseStatus string
+	if event.Response != nil {
+		_ = common.Unmarshal(event.Response.Status, &responseStatus)
+	}
+	switch {
+	case event.Type == "error" || event.Type == "response.failed" || event.Type == "response.error" || responseStatus == "failed":
+		code, errorType := event.Code, ""
+		if event.Response != nil {
+			if oaiErr := event.Response.GetOpenAIError(); oaiErr != nil {
+				if oaiErr.Code != nil {
+					code = fmt.Sprint(oaiErr.Code)
+				}
+				errorType = oaiErr.Type
+			}
+		}
+		info.StreamStatus.MarkFailed(code, errorType, 0)
+	case event.Type == "response.incomplete" || responseStatus == "incomplete":
+		reason := ""
+		if event.Response != nil && event.Response.IncompleteDetails != nil {
+			reason = event.Response.IncompleteDetails.Reason
+		}
+		info.StreamStatus.MarkIncomplete(reason)
+	case event.Type == "response.cancelled" || event.Type == "response.canceled" || responseStatus == "cancelled":
+		info.StreamStatus.MarkCancelled()
+	case event.Type == "response.completed" || event.Type == "response.done" || responseStatus == "completed":
+		info.StreamStatus.MarkCompleted()
+	}
 }
 
 func ApplyResponsesUsage(dst *dto.Usage, src *dto.Usage) {
