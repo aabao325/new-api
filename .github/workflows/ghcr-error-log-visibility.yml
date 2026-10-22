@@ -4,6 +4,10 @@ name: Publish image to GHCR (error-log-visibility)
 # (Baota / 宝塔 pulls it directly). Uses the built-in GITHUB_TOKEN, so no
 # DOCKERHUB_* secrets are required. Action versions are SHA-pinned to match
 # the other workflows in this repository.
+#
+# The repo-root VERSION file is the ONLY place the image version lives.
+# Bumping VERSION is all that a version change requires — this workflow reads
+# it back and derives every tag from it.
 
 on:
   push:
@@ -12,18 +16,45 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Docker tag to publish (default: error-log-visibility)'
+        description: 'Docker tag to publish (leave empty to use VERSION)'
         required: false
-        default: 'v1.0.0-rc.45-log'
+        default: ''
         type: string
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/new-api
-  TAG: ${{ github.event.inputs.tag || 'v1.0.0-rc.45-log' }}
 
 jobs:
+  prepare:
+    name: Resolve tag from VERSION
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+
+      - name: Read VERSION
+        id: version
+        run: |
+          tag="$(tr -d '[:space:]' < VERSION)"
+          if [ -z "$tag" ]; then
+            echo "::error::VERSION is empty; fill it before building."
+            exit 1
+          fi
+          echo "Resolved tag: ${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build & push (${{ matrix.arch }})
+    needs: [prepare]
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +71,10 @@ jobs:
       contents: read
       packages: write
 
+    env:
+      # A manual run may override the tag; otherwise VERSION wins.
+      TAG: ${{ github.event.inputs.tag || needs.prepare.outputs.tag }}
+
     steps:
       - name: Check out
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -47,8 +82,8 @@ jobs:
           fetch-depth: 1
 
       - name: Write VERSION
-        # VERSION is empty in the repo; the Dockerfile bakes `cat VERSION` into
-        # the binary, so give it something traceable back to this commit.
+        # The Dockerfile bakes `cat VERSION` into the binary; add the commit
+        # suffix so a running container can be traced back to a build.
         run: echo "${TAG}-${GITHUB_SHA::7}" > VERSION
 
       - name: Set up Docker Buildx
@@ -85,11 +120,14 @@ jobs:
 
   manifest:
     name: Create multi-arch manifest
-    needs: [build]
+    needs: [prepare, build]
     runs-on: ubuntu-latest
 
     permissions:
       packages: write
+
+    env:
+      TAG: ${{ github.event.inputs.tag || needs.prepare.outputs.tag }}
 
     steps:
       - name: Log in to GHCR
@@ -102,7 +140,8 @@ jobs:
       - name: Create & push manifests
         run: |
           SHORT_SHA=${GITHUB_SHA::7}
-          for t in "${TAG}" "${TAG}-${SHORT_SHA}"; do
+          # `latest` always follows the newest build of this branch.
+          for t in "${TAG}" "latest" "${TAG}-${SHORT_SHA}"; do
             docker buildx imagetools create -t "${IMAGE}:${t}" \
               "${IMAGE}:${TAG}-amd64" \
               "${IMAGE}:${TAG}-arm64"
@@ -115,6 +154,7 @@ jobs:
             echo "### Pull command"
             echo '```bash'
             echo "docker pull ${IMAGE}:${TAG}"
+            echo "docker pull ${IMAGE}:latest"
             echo '```'
             echo "Pinned: \`${IMAGE}:${TAG}-${SHORT_SHA}\`"
             echo ''
