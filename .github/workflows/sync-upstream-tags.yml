@@ -1,0 +1,304 @@
+name: Sync upstream release tag
+
+# fork 专用：定时把 QuantumNous/new-api 最新的发版 tag（v*）合并进
+# fix/error-log-user-visibility，CI 全绿后自动合入。
+#
+# 为什么必须走 PR 而不是直接 push：
+#   ci.yml 只监听 pull_request，直接 push 到分支不会触发任何校验。所以先把
+#   合并结果推到 sync/upstream-<tag> 分支，用 PR 拿 CI 结论，绿了才合入目标
+#   分支。有冲突时 PR 留在那里等人处理，目标分支一个字都不动。
+#
+# 为什么用 PAT（secret SYNC_PAT）而不是 GITHUB_TOKEN：
+#   - GITHUB_TOKEN 不能创建或更新 .github/workflows/**，上游一改 CI 配置就 422。
+#   - GITHUB_TOKEN 触发的 push 不会触发其它 workflow，合入后
+#     ghcr-error-log-visibility.yml 不会跑，latest 镜像就停在旧版本。
+#   PAT 同时解决这两点。
+#
+# VERSION 约定：合并之后再单独提交一次，把 VERSION 写成 <upstream-tag>-log，
+# 例如 v1.0.0-rc.47-log。镜像工作流读它，并且每次构建都会刷新 latest。
+
+on:
+  schedule:
+    # 每天 20:17 UTC（北京时间次日 04:17）。GitHub 定时任务是 best-effort，
+    # 高负载时会延迟或跳过；公开仓库连续 60 天无提交活动会被自动停用。
+    - cron: '17 20 * * *'
+  workflow_dispatch:
+
+env:
+  UPSTREAM: https://github.com/QuantumNous/new-api.git
+  UPSTREAM_SLUG: QuantumNous/new-api
+  TARGET: fix/error-log-user-visibility
+
+# 全程用 SYNC_PAT。这里的 issues 权限只是 PAT 不可用时开失败 Issue 的兜底。
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-upstream-tags
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge latest upstream tag
+    # 只在这个 fork 里跑，避免被别人 fork 后到处触发。
+    if: github.repository == 'aabao325/new-api'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check SYNC_PAT
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          if [ -z "${SYNC_PAT}" ]; then
+            echo '::error::secret SYNC_PAT 未配置。到 https://github.com/settings/personal-access-tokens 新建 fine-grained PAT（Repository access 选本仓库，Repository permissions 勾 Contents / Workflows / Issues 三项 Read and write），再到本仓库 Settings → Secrets and variables → Actions 保存为 SYNC_PAT。'
+            exit 1
+          fi
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{ secrets.SYNC_PAT }}
+          ref: ${{ env.TARGET }}
+          fetch-depth: 0
+
+      - name: Detect new upstream tag
+        id: detect
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force "$UPSTREAM"
+
+          # tag 按版本号倒序，取第一个还没进入当前分支历史的。
+          # 已并入的 tag 是 HEAD 的祖先，说明那次发版已经跟过了。
+          latest=''
+          while IFS= read -r tag; do
+            if ! git merge-base --is-ancestor "$tag" HEAD; then
+              latest="$tag"
+              break
+            fi
+          done < <(git tag -l 'v*' --sort=-v:refname)
+
+          if [ -z "$latest" ]; then
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "上游没有新的发版 tag，\`${TARGET}\` 已是最新。" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "Detected ${latest}"
+          echo "tag=${latest}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for an unfinished sync PR
+        id: pending
+        if: steps.detect.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+        run: |
+          set -euo pipefail
+
+          existing="$(
+            gh pr list --repo "${{ github.repository }}" --state open \
+              --label upstream-sync --json number --jq '.[0].number // empty'
+          )"
+
+          if [ -n "$existing" ]; then
+            echo "存在未处理的同步 PR #${existing}，本次跳过。"
+            echo "### 跳过同步" >> "$GITHUB_STEP_SUMMARY"
+            echo "已有未处理的同步 PR [#${existing}](https://github.com/${{ github.repository }}/pull/${existing})，先处理它再跑下一次。" >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge tag on a sync branch
+        id: merge
+        if: steps.detect.outputs.tag != '' && steps.pending.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.detect.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          branch="sync/upstream-${TAG}"
+          git switch --create "$branch"
+
+          if git merge --no-edit "$TAG"; then
+            status=clean
+          else
+            # 冲突时不要留下半成品：把分支指向上游 tag 本身，PR 会显示
+            # 「有冲突」，由人决定怎么解。目标分支完全不动。
+            git diff --name-only --diff-filter=U > conflicts.txt || true
+            git merge --abort
+            git reset --hard "$TAG"
+            status=conflict
+          fi
+
+          if [ "$status" = clean ]; then
+            # VERSION 是本仓库镜像版本的唯一来源，写成 <上游tag>-log。
+            printf '%s' "${TAG}-log" > VERSION
+            git add VERSION
+            git commit -m "chore: set VERSION to ${TAG}-log"
+          fi
+
+          # --force-with-lease 钉住刚创建的分支，避免覆盖别人同名分支上的提交。
+          git push --force-with-lease origin "HEAD:refs/heads/${branch}"
+
+          base="$(git merge-base "origin/${TARGET}" "$TAG")"
+          count="$(git rev-list --count "${base}..${TAG}")"
+
+          {
+            echo "branch=${branch}"
+            echo "status=${status}"
+            echo "count=${count}"
+            echo "base=${base}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Merge status: ${status}"
+
+      - name: Open sync pull request
+        id: pr
+        if: steps.merge.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+          TAG: ${{ steps.detect.outputs.tag }}
+          BRANCH: ${{ steps.merge.outputs.branch }}
+          STATUS: ${{ steps.merge.outputs.status }}
+          COUNT: ${{ steps.merge.outputs.count }}
+          BASE: ${{ steps.merge.outputs.base }}
+        run: |
+          set -euo pipefail
+
+          repo="${{ github.repository }}"
+
+          # 标签不存在时先建，否则 --label 会失败。
+          gh label create upstream-sync --color '0E8A16' \
+            --description 'Automatic upstream tag sync' 2>/dev/null || true
+          gh label create upstream-conflict --color 'B60205' \
+            --description 'Upstream tag sync has conflicts' 2>/dev/null || true
+
+          labels=(--label upstream-sync)
+          if [ "$STATUS" = conflict ]; then
+            labels+=(--label upstream-conflict)
+          fi
+
+          {
+            echo "### 上游同步 $TAG"
+            echo
+            echo "目标分支：\`${TARGET}\`"
+            echo
+            echo "带来 **${COUNT}** 个提交。"
+            echo "[查看上游 diff](https://github.com/${UPSTREAM_SLUG}/compare/${BASE}...${TAG})"
+            echo
+            if [ "$STATUS" = conflict ]; then
+              echo '> [!WARNING]'
+              echo '> 与本地改动存在冲突，**没有自动处理**。目标分支未做任何改动。'
+              echo '> 请在本分支上手动解冲突后合并，或关闭本 PR 放弃这次同步。'
+              echo
+              if [ -s conflicts.txt ]; then
+                echo '冲突文件：'
+                echo
+                echo '```'
+                sed 's/^/- /' conflicts.txt
+                echo '```'
+              fi
+            else
+              echo 'CI 全部通过后会自动合入目标分支。'
+              echo
+              echo "\`VERSION\` 已更新为 \`${TAG}-log\`。"
+            fi
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > body.md
+
+          url="$(
+            gh pr create --repo "$repo" --base "$TARGET" --head "$BRANCH" \
+              --title "sync: upstream ${TAG}" \
+              --body-file body.md "${labels[@]}"
+          )"
+          echo "Opened ${url}"
+
+          number="$(gh pr view "$url" --repo "$repo" --json number --jq .number)"
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CI and merge
+        if: steps.pr.outputs.number != '' && steps.merge.outputs.status == 'clean'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          set -euo pipefail
+
+          repo="${{ github.repository }}"
+
+          # PR 刚建好时检查项还没注册，先等它们出现（最多 15 分钟）。
+          count=0
+          for _ in $(seq 1 60); do
+            count="$(gh pr view "$PR" --repo "$repo" --json statusCheckRollup --jq '.statusCheckRollup | length')"
+            [ "$count" -gt 0 ] && break
+            sleep 15
+          done
+          if [ "$count" -eq 0 ]; then
+            echo '::error::CI 没有注册任何检查项，PR 保持打开。'
+            exit 1
+          fi
+
+          # --watch 会阻塞到所有检查结束；任何一项失败都会以非 0 退出。
+          if ! timeout 2700 gh pr checks "$PR" --repo "$repo" --watch --interval 30; then
+            echo '::error::CI 未通过，PR 保持打开，目标分支未改动。'
+            exit 1
+          fi
+
+          # 当前 checkout 在同步分支上，先脱离，否则 --delete-branch 会报错。
+          git switch --detach
+
+          # 合并用 PAT 身份提交，这样推送到目标分支才会触发镜像工作流。
+          gh pr merge "$PR" --repo "$repo" --merge --delete-branch
+
+          {
+            echo "### 已合入 \`${TARGET}\`"
+            echo
+            echo "PR #${PR} 的检查全部通过，已自动合并。"
+            echo "镜像工作流会被这次推送触发，\`latest\` 随之更新。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update failure issue
+        if: failure()
+        env:
+          # PAT 优先；PAT 恰好就是失败原因时退回 GITHUB_TOKEN，至少留个 Issue。
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+
+          title='Upstream tag sync failed'
+          label='upstream-sync-failed'
+
+          gh label create "$label" --color 'B60205' \
+            --description 'Automatic upstream tag sync failed' 2>/dev/null || true
+
+          existing="$(
+            gh issue list --state open --label "$label" \
+              --json number --jq '.[0].number // empty'
+          )"
+
+          cat > note.md <<EOF
+          自动同步 \`${UPSTREAM_SLUG}\` 的发版 tag 到 \`${TARGET}\` 失败。目标分支未做任何改动。
+
+          常见原因：
+
+          - secret \`SYNC_PAT\` 未配置、已过期，或缺 Contents / Workflows / Issues 写权限
+          - 上游 tag 合并进来时带着 \`.github/workflows/**\` 改动，而 PAT 没有 workflows 权限
+          - PR 的 CI 未通过（PR 会保持打开，先看那里的日志）
+          - 上一次的同步 PR 还没处理完
+
+          Run: ${RUN_URL}
+          EOF
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file note.md
+            echo "Commented on existing issue #${existing}."
+          else
+            gh issue create --title "$title" --label "$label" --body-file note.md
+          fi
