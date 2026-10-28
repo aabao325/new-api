@@ -140,6 +140,18 @@ func TestGeminiInputTokenCount(t *testing.T) {
 			wantDerive: true,
 		},
 		{
+			// Upstream sample with an image input sent as fileData+fileUri:
+			// promptTokenCount reported as 0 while the total still carries it.
+			name: "image file uri input recovered from the total",
+			metadata: GeminiUsageMetadata{
+				CandidatesTokenCount: 1258,
+				ThoughtsTokenCount:   178,
+				TotalTokenCount:      1947,
+			},
+			wantTokens: 511,
+			wantDerive: true,
+		},
+		{
 			name:       "thoughts stay on the output side",
 			metadata:   GeminiUsageMetadata{CandidatesTokenCount: 40, ThoughtsTokenCount: 60, TotalTokenCount: 130},
 			wantTokens: 30,
