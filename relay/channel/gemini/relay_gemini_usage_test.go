@@ -301,7 +301,7 @@ func TestGeminiTextGenerationHandlerPromptTokensIncludeToolUsePromptTokens(t *te
 	require.Equal(t, 1120, usage.CompletionTokenDetails.ReasoningTokens)
 }
 
-func TestGeminiChatHandlerUsesEstimatedPromptTokensWhenUsagePromptMissing(t *testing.T) {
+func TestGeminiChatHandlerDerivesPromptTokensFromTotalWhenUsagePromptMissing(t *testing.T) {
 	t.Parallel()
 
 	gin.SetMode(gin.TestMode)
@@ -347,12 +347,12 @@ func TestGeminiChatHandlerUsesEstimatedPromptTokensWhenUsagePromptMissing(t *tes
 	usage, newAPIError := GeminiChatHandler(c, info, resp)
 	require.Nil(t, newAPIError)
 	require.NotNil(t, usage)
-	require.Equal(t, 20, usage.PromptTokens)
+	require.Equal(t, 10, usage.PromptTokens)
 	require.Equal(t, 100, usage.CompletionTokens)
 	require.Equal(t, 110, usage.TotalTokens)
 }
 
-func TestGeminiStreamHandlerUsesEstimatedPromptTokensWhenUsagePromptMissing(t *testing.T) {
+func TestGeminiStreamHandlerDerivesPromptTokensFromTotalWhenUsagePromptMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
@@ -404,12 +404,12 @@ func TestGeminiStreamHandlerUsesEstimatedPromptTokensWhenUsagePromptMissing(t *t
 	})
 	require.Nil(t, newAPIError)
 	require.NotNil(t, usage)
-	require.Equal(t, 20, usage.PromptTokens)
+	require.Equal(t, 10, usage.PromptTokens)
 	require.Equal(t, 100, usage.CompletionTokens)
 	require.Equal(t, 110, usage.TotalTokens)
 }
 
-func TestGeminiTextGenerationHandlerUsesEstimatedPromptTokensWhenUsagePromptMissing(t *testing.T) {
+func TestGeminiTextGenerationHandlerDerivesPromptTokensFromTotalWhenUsagePromptMissing(t *testing.T) {
 	t.Parallel()
 
 	gin.SetMode(gin.TestMode)
@@ -454,9 +454,56 @@ func TestGeminiTextGenerationHandlerUsesEstimatedPromptTokensWhenUsagePromptMiss
 	usage, newAPIError := GeminiTextGenerationHandler(c, info, resp)
 	require.Nil(t, newAPIError)
 	require.NotNil(t, usage)
-	require.Equal(t, 20, usage.PromptTokens)
+	require.Equal(t, 10, usage.PromptTokens)
 	require.Equal(t, 100, usage.CompletionTokens)
 	require.Equal(t, 110, usage.TotalTokens)
+}
+
+func TestGeminiChatHandlerUsesEstimatedPromptTokensWhenTotalMissing(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+
+	info := &relaycommon.RelayInfo{
+		RelayFormat:     types.RelayFormatGemini,
+		OriginModelName: "gemini-3-flash-preview",
+		ChannelMeta: &relaycommon.ChannelMeta{
+			UpstreamModelName: "gemini-3-flash-preview",
+		},
+	}
+	info.SetEstimatePromptTokens(20)
+
+	// No total means the input side cannot be recovered from upstream, so the
+	// local estimate stays the only source.
+	payload := dto.GeminiChatResponse{
+		Candidates: []dto.GeminiChatCandidate{
+			{
+				Content: dto.GeminiChatContent{
+					Role:  "model",
+					Parts: []dto.GeminiPart{{Text: "ok"}},
+				},
+			},
+		},
+		UsageMetadata: dto.GeminiUsageMetadata{
+			CandidatesTokenCount: 90,
+			ThoughtsTokenCount:   10,
+		},
+	}
+
+	body, err := common.Marshal(payload)
+	require.NoError(t, err)
+
+	resp := &http.Response{
+		Body: io.NopCloser(bytes.NewReader(body)),
+	}
+
+	usage, newAPIError := GeminiChatHandler(c, info, resp)
+	require.Nil(t, newAPIError)
+	require.NotNil(t, usage)
+	require.Equal(t, 20, usage.PromptTokens)
+	require.Equal(t, 100, usage.CompletionTokens)
 }
 
 func TestGeminiChatHandlerMissingUsageMetadataBuildsEstimatedBillingUsage(t *testing.T) {
