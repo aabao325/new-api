@@ -54,7 +54,14 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Write VERSION
-        run: echo "${{ steps.meta.outputs.version }}" > VERSION
+        # The branch may pin its own version (for example v1.0.0-rc.47-gemini);
+        # only fall back to the derived tag when VERSION is empty, as it is on
+        # upstream main.
+        run: |
+          if [ ! -s VERSION ]; then
+            echo "${{ steps.meta.outputs.version }}" > VERSION
+          fi
+          echo "Building version: $(cat VERSION)"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
