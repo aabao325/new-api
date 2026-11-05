@@ -125,20 +125,22 @@ func TestLogExportDatabaseMatrix(t *testing.T) {
 			seedExportLogs(t, mainDB, model.LOG_DB, now)
 			query := fmt.Sprintf("start_timestamp=%d&end_timestamp=%d", now-2*24*3600, now+3600)
 
+			// Users never see LogTypeError entries: the list and the export drop
+			// a-2, while an administrator's search still returns it.
 			listed := callLogHandler(t, GetUserLogs, 1, common.RoleCommonUser, query)[0]
 			require.Equal(t, true, listed["success"])
-			assert.EqualValues(t, 2, listed["data"].(map[string]any)["total"])
+			assert.EqualValues(t, 1, listed["data"].(map[string]any)["total"])
 			listed = callLogHandler(t, GetAllLogs, 3, common.RoleAdminUser, query+"&username=alice")[0]
 			require.Equal(t, true, listed["success"])
 			assert.EqualValues(t, 2, listed["data"].(map[string]any)["total"])
 
 			own := callLogHandler(t, ExportUserLogs, 1, common.RoleCommonUser, query)
-			require.Len(t, own, 3)
-			assert.Equal(t, []any{"a-2", "a-1"}, exportedRequestIds(own))
-			assert.Equal(t, map[string]any{"success": true, "message": "", "data": map[string]any{"count": float64(2)}}, own[2])
+			require.Len(t, own, 2)
+			assert.Equal(t, []any{"a-1"}, exportedRequestIds(own))
+			assert.Equal(t, map[string]any{"success": true, "message": "", "data": map[string]any{"count": float64(1)}}, own[1])
 			assert.Equal(t, float64(1), own[0]["id"], "user exports carry list positions, not row ids")
-			assert.Empty(t, own[1]["channel_name"])
-			assert.NotContains(t, own[1]["other"], "admin_info")
+			assert.Empty(t, own[0]["channel_name"])
+			assert.NotContains(t, own[0]["other"], "admin_info")
 
 			all := callLogHandler(t, ExportAllLogs, 3, common.RoleAdminUser, query+"&model_name=gpt-%25")
 			require.Len(t, all, 4)
@@ -184,7 +186,7 @@ func TestLogExportRules(t *testing.T) {
 		// Without a start, a user's search reaches back the whole range.
 		listed := callLogHandler(t, GetUserLogs, 1, common.RoleCommonUser, "")[0]
 		assert.Equal(t, true, listed["success"])
-		assert.EqualValues(t, 2, listed["data"].(map[string]any)["total"])
+		assert.EqualValues(t, 1, listed["data"].(map[string]any)["total"])
 
 		logSetting.MaxRangeDays = 400
 		assert.Equal(t, true, callLogHandler(t, GetUserLogs, 1, common.RoleCommonUser, tooLong)[0]["success"])
@@ -210,7 +212,7 @@ func TestLogExportRules(t *testing.T) {
 		other := callLogHandler(t, ExportUserLogs, 2, common.RoleCommonUser, recent)
 		assert.Equal(t, true, other[len(other)-1]["success"], "other users are not blocked")
 		release()
-		assert.Len(t, callLogHandler(t, ExportUserLogs, 1, common.RoleCommonUser, recent), 3)
+		assert.Len(t, callLogHandler(t, ExportUserLogs, 1, common.RoleCommonUser, recent), 2)
 	})
 }
 
