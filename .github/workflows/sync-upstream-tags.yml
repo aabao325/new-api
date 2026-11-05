@@ -275,14 +275,6 @@ jobs:
           title='Upstream tag sync failed'
           label='upstream-sync-failed'
 
-          gh label create "$label" --color 'B60205' \
-            --description 'Automatic upstream tag sync failed' 2>/dev/null || true
-
-          existing="$(
-            gh issue list --state open --label "$label" \
-              --json number --jq '.[0].number // empty'
-          )"
-
           cat > note.md <<EOF
           自动同步 \`${UPSTREAM_SLUG}\` 的发版 tag 到 \`${TARGET}\` 失败。目标分支未做任何改动。
 
@@ -295,6 +287,24 @@ jobs:
 
           Run: ${RUN_URL}
           EOF
+
+          # 摘要总是写，Issues 关掉时这就是唯一的通知渠道。
+          cat note.md >> "$GITHUB_STEP_SUMMARY"
+
+          # 本 fork 关闭了 Issues，gh issue 子命令会直接失败并让这一步变成第二个
+          # 失败点，把真正的错误盖住。没有 Issues 就只留摘要。
+          if [ "$(gh repo view --json hasIssuesEnabled --jq .hasIssuesEnabled)" != 'true' ]; then
+            echo '本仓库未启用 Issues，失败原因见上方摘要。'
+            exit 0
+          fi
+
+          gh label create "$label" --color 'B60205' \
+            --description 'Automatic upstream tag sync failed' 2>/dev/null || true
+
+          existing="$(
+            gh issue list --state open --label "$label" \
+              --json number --jq '.[0].number // empty'
+          )"
 
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body-file note.md
