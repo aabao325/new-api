@@ -68,8 +68,11 @@ func TestStreamScannerHandler_RequestKeepAliveHandoff(t *testing.T) {
 
 			resp := &http.Response{
 				Header: http.Header{
-					"X-Reasoning-Included": {"true"},
-					"X-Codex-Turn-State":   {"turn-state"},
+					"X-Reasoning-Included":                {"true"},
+					"X-Codex-Turn-State":                  {"turn-state"},
+					"Msh-Usage-Cache-Write-Tokens-1h":     {"120"},
+					"Msh-Usage-Cache-Write-Tokens-5m":     {"30"},
+					"X-Unlisted-Upstream-Response-Header": {"leak"},
 				},
 				Body: io.NopCloser(strings.NewReader("data: chunk\n\ndata: [DONE]\n\n")),
 			}
@@ -91,6 +94,9 @@ func TestStreamScannerHandler_RequestKeepAliveHandoff(t *testing.T) {
 				assert.Equal(t, "data: chunk\n\n", writer.Body.String())
 				assert.Equal(t, "true", writer.Result().Header.Get("X-Reasoning-Included"))
 				assert.Equal(t, "turn-state", writer.Result().Header.Get("X-Codex-Turn-State"))
+				assert.Equal(t, "120", writer.Result().Header.Get("Msh-Usage-Cache-Write-Tokens-1h"))
+				assert.Equal(t, "30", writer.Result().Header.Get("Msh-Usage-Cache-Write-Tokens-5m"))
+				assert.Empty(t, writer.Result().Header.Get("X-Unlisted-Upstream-Response-Header"))
 			}
 		})
 	}
