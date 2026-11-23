@@ -351,6 +351,28 @@ type GeminiPart struct {
 	CodeExecutionResult *GeminiPartCodeExecutionResult `json:"codeExecutionResult,omitempty"`
 }
 
+// MarshalJSON keeps an explicit empty text part on the wire.
+//
+// Gemini validates the data oneof of every part: {"text":""} is a valid part,
+// while the {} that `omitempty` alone produces for an empty string carries no
+// data member, so upstream answers the whole request with "required oneof field
+// 'data' must have one initialized field". Gemini returns exactly such an empty
+// text part at the end of a functionCall turn, and clients echo it back in the
+// next round's model history, so it must survive the parse/re-marshal round trip.
+func (p GeminiPart) MarshalJSON() ([]byte, error) {
+	type Alias GeminiPart
+	if p.Text != "" || p.InlineData != nil || p.FunctionCall != nil || p.FunctionResponse != nil ||
+		p.FileData != nil || p.ExecutableCode != nil || p.CodeExecutionResult != nil {
+		return kitutil.Marshal(Alias(p))
+	}
+	// Text is the only data member this part can carry, so write it even when
+	// empty rather than dropping the oneof member entirely.
+	return kitutil.Marshal(struct {
+		Alias
+		Text string `json:"text"`
+	}{Alias: Alias(p)})
+}
+
 // UnmarshalJSON accepts snake_case aliases for inline data and media processing.
 func (p *GeminiPart) UnmarshalJSON(data []byte) error {
 	// Alias to avoid recursion during unmarshalling
