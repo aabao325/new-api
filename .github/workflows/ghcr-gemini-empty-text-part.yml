@@ -140,8 +140,9 @@ jobs:
       - name: Create & push manifests
         run: |
           SHORT_SHA=${GITHUB_SHA::7}
-          # `latest` always follows the newest build of this branch.
-          for t in "${TAG}" "latest" "${TAG}-${SHORT_SHA}"; do
+          # The shared `latest` tag belongs to the log branch image. This branch
+          # publishes its own version tags only, so it never hijacks `latest`.
+          for t in "${TAG}" "${TAG}-${SHORT_SHA}"; do
             docker buildx imagetools create -t "${IMAGE}:${t}" \
               "${IMAGE}:${TAG}-amd64" \
               "${IMAGE}:${TAG}-arm64"
@@ -154,7 +155,6 @@ jobs:
             echo "### Pull command"
             echo '```bash'
             echo "docker pull ${IMAGE}:${TAG}"
-            echo "docker pull ${IMAGE}:latest"
             echo '```'
             echo "Pinned: \`${IMAGE}:${TAG}-${SHORT_SHA}\`"
             echo ''
