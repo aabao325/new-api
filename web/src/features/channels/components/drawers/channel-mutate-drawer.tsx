@@ -341,6 +341,7 @@ const SENSITIVE_FORM_FIELDS = [
   'http2_connection_shards',
   'tls_insecure_skip_verify',
   'pass_through_body_enabled',
+  'rewrite_response_model',
   'responses_websocket_enabled',
   'system_prompt',
   'system_prompt_override',
@@ -2062,6 +2063,32 @@ export function ChannelMutateDrawer({
             <FormLabel>{t('Thinking to Content')}</FormLabel>
             <FormDescription>
               {t('Convert reasoning_content to <think> tag in content')}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const responseModelEchoFields = currentType === 14 && (
+    <FormField
+      control={form.control}
+      name='rewrite_response_model'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Echo Requested Model')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Return the requested model name in responses instead of the upstream model name'
+              )}
             </FormDescription>
           </div>
           <FormControl>
@@ -5038,6 +5065,7 @@ export function ChannelMutateDrawer({
                 {formatFields}
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
+                {responseModelEchoFields}
                 {passthroughFields}
                 {systemPromptFields}
                 {systemPromptOverrideFields}

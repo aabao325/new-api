@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MoeForge/moego/ojson"
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
@@ -33,6 +34,26 @@ func maybeMarkClaudeRefusal(c *gin.Context, info *relaycommon.RelayInfo, stopRea
 		info.PerformanceBusinessRejection = true
 		common.SetContextKey(c, constant.ContextKeyAdminRejectReason, "claude_stop_reason=refusal")
 	}
+}
+
+// shouldEchoRequestModel reports whether this channel replaces the model the
+// upstream declared with the model the client requested. Billing and the
+// response-model diagnostics keep the upstream declaration either way.
+func shouldEchoRequestModel(info *relaycommon.RelayInfo) bool {
+	return info != nil && info.ChannelMeta != nil &&
+		info.ChannelSetting.RewriteResponseModel && info.OriginModelName != ""
+}
+
+// responseModelName is the model name a response body should carry: the
+// requested model when the channel echoes it, otherwise the upstream model.
+func responseModelName(info *relaycommon.RelayInfo) string {
+	if info == nil {
+		return ""
+	}
+	if shouldEchoRequestModel(info) {
+		return info.OriginModelName
+	}
+	return info.GetUpstreamModelName()
 }
 
 func StreamResponseClaude2OpenAI(claudeResponse *dto.ClaudeResponse) *dto.ChatCompletionsStreamResponse {
@@ -96,8 +117,17 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 	if claudeError := claudeResponse.GetClaudeError(); claudeError != nil && claudeError.Type != "" {
 		return types.WithClaudeError(*claudeError, http.StatusInternalServerError)
 	}
+	upstreamModel := ""
 	if claudeResponse.Type == "message_start" && claudeResponse.Message != nil {
-		info.ObserveResponseModel(claudeResponse.Message.Model)
+		upstreamModel = claudeResponse.Message.Model
+		info.ObserveResponseModel(upstreamModel)
+		if shouldEchoRequestModel(info) {
+			claudeResponse.Model = info.OriginModelName
+			claudeResponse.Message.Model = info.OriginModelName
+			if patched, patchErr := ojson.Set(data, "message.model", info.OriginModelName); patchErr == nil {
+				data = patched
+			}
+		}
 	}
 	if claudeResponse.StopReason != "" {
 		maybeMarkClaudeRefusal(c, info, claudeResponse.StopReason)
@@ -111,11 +141,9 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 	if info.RelayFormat == types.RelayFormatClaude {
 		FormatClaudeResponseInfo(&claudeResponse, nil, claudeInfo)
 
-		if claudeResponse.Type == "message_start" {
+		if claudeResponse.Type == "message_start" && claudeResponse.Message != nil {
 			// message_start, 获取usage
-			if claudeResponse.Message != nil {
-				info.UpstreamModelName = claudeResponse.Message.Model
-			}
+			info.UpstreamModelName = upstreamModel
 		} else if claudeResponse.Type == "message_delta" {
 			// 确保 message_delta 的 usage 包含完整的 input_tokens 和 cache 相关字段
 			// 解决 AWS Bedrock 等上游返回的 message_delta 缺少这些字段的问题
@@ -307,7 +335,7 @@ func HandleStreamFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, clau
 	} else if info.RelayFormat == types.RelayFormatOpenAI {
 		if info.ShouldIncludeUsage {
 			openAIUsage := buildOpenAIStyleUsageFromClaudeUsage(claudeInfo.Usage)
-			response := helper.GenerateFinalUsageResponse(claudeInfo.ResponseId, claudeInfo.Created, info.UpstreamModelName, openAIUsage)
+			response := helper.GenerateFinalUsageResponse(claudeInfo.ResponseId, claudeInfo.Created, responseModelName(info), openAIUsage)
 			err := helper.ObjectData(c, response)
 			if err != nil {
 				common.SysLog(common.LogText("send final response failed: %s", err.Error()))
@@ -365,6 +393,9 @@ func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		return types.WithClaudeError(*claudeError, http.StatusInternalServerError)
 	}
 	info.ObserveResponseModel(claudeResponse.Model)
+	if shouldEchoRequestModel(info) {
+		claudeResponse.Model = info.OriginModelName
+	}
 	maybeMarkClaudeRefusal(c, info, claudeResponse.StopReason)
 	if claudeInfo.Usage == nil {
 		claudeInfo.Usage = &dto.Usage{}
@@ -410,6 +441,11 @@ func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		}
 	case types.RelayFormatClaude:
 		responseData = data
+		if shouldEchoRequestModel(info) {
+			if patched, patchErr := ojson.SetBytes(responseData, "model", info.OriginModelName); patchErr == nil {
+				responseData = patched
+			}
+		}
 	case types.RelayFormatGemini:
 		{
 			convertResult, convertErr := service.ConvertResponse(c, info, types.RelayFormatGemini, &claudeResponse)

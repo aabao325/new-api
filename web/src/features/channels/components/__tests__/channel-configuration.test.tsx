@@ -1261,6 +1261,35 @@ test('quick options and detailed settings share changes across tabs and save the
   })
 })
 
+test('anthropic channels switch echoing the requested model', async () => {
+  editingChannel = {
+    ...editingChannel,
+    type: 14,
+    models: 'claude-sonnet-4-5',
+    setting: JSON.stringify({ rewrite_response_model: true }),
+  }
+  const put = vi.spyOn(api, 'put').mockImplementation(async (_url, payload) => {
+    editingChannel = { ...editingChannel, ...(payload as Partial<Channel>) }
+    return { data: { success: true } }
+  })
+  const user = userEvent.setup()
+  render(<ConfigurationHarness currentRow={editingChannel} />)
+  await screen.findByDisplayValue('Existing channel')
+  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+  const toggle = screen.getByRole('switch', {
+    name: 'Echo Requested Model',
+  })
+  expect(toggle).toBeChecked()
+  await user.click(toggle)
+  expect(toggle).not.toBeChecked()
+  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+  await waitFor(() => expect(put).toHaveBeenCalled())
+  const payload = put.mock.calls[0]?.[1] as { setting: string }
+  expect(JSON.parse(payload.setting)).toMatchObject({
+    rewrite_response_model: false,
+  })
+})
+
 test.each(['stacked', 'inline'])(
   'advanced custom body passthrough saves and reloads from %s quick options and can be disabled in detailed settings',
   async (layout) => {

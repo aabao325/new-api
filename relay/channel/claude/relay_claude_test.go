@@ -502,3 +502,107 @@ func TestClaudeResponsePassesInputTransformationsThrough(t *testing.T) {
 	require.Nil(t, HandleStreamResponseData(c, info, &ClaudeResponseInfo{Usage: &dto.Usage{}}, event))
 	assert.Contains(t, w.Body.String(), "data: "+event+"\n")
 }
+
+func TestClaudeResponseModelEchoesRequestedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const (
+		upstreamModel = "claude-upstream-2026-01-01"
+		body          = `{"id":"msg_1","type":"message","role":"assistant","model":"` + upstreamModel + `","content":[{"type":"text","text":"hi"}],"stop_reason":"end_turn","usage":{"input_tokens":5,"output_tokens":1}}`
+		event         = `{"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"` + upstreamModel + `","content":[],"usage":{"input_tokens":5,"output_tokens":1}}}`
+	)
+	dataPayload := func(body string) string {
+		for line := range strings.SplitSeq(body, "\n") {
+			if payload, ok := strings.CutPrefix(line, "data: "); ok {
+				return payload
+			}
+		}
+		return ""
+	}
+	for _, tc := range []struct {
+		name   string
+		echo   bool
+		format types.RelayFormat
+		stream bool
+		want   string
+	}{
+		{name: "messages echoes", echo: true, format: types.RelayFormatClaude, want: "requested"},
+		{name: "messages keeps upstream", format: types.RelayFormatClaude, want: upstreamModel},
+		{name: "chat echoes", echo: true, format: types.RelayFormatOpenAI, want: "requested"},
+		{name: "chat keeps upstream", format: types.RelayFormatOpenAI, want: upstreamModel},
+		{name: "messages stream echoes", echo: true, format: types.RelayFormatClaude, stream: true, want: "requested"},
+		{name: "messages stream keeps upstream", format: types.RelayFormatClaude, stream: true, want: upstreamModel},
+		{name: "chat stream echoes", echo: true, format: types.RelayFormatOpenAI, stream: true, want: "requested"},
+		{name: "chat stream keeps upstream", format: types.RelayFormatOpenAI, stream: true, want: upstreamModel},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+			info := &relaycommon.RelayInfo{
+				OriginModelName: "requested",
+				RelayFormat:     tc.format,
+				ChannelMeta: &relaycommon.ChannelMeta{
+					UpstreamModelName: "mapped",
+					ChannelSetting:    dto.ChannelSettings{RewriteResponseModel: tc.echo},
+				},
+			}
+			claudeInfo := &ClaudeResponseInfo{Usage: &dto.Usage{}}
+			if tc.stream {
+				require.Nil(t, HandleStreamResponseData(c, info, claudeInfo, event))
+			} else {
+				require.Nil(t, HandleClaudeResponseData(c, info, claudeInfo, nil, []byte(body)))
+			}
+
+			var got string
+			if tc.stream {
+				var parsed struct {
+					Model   string `json:"model"`
+					Message *struct {
+						Model string `json:"model"`
+					} `json:"message"`
+				}
+				require.NoError(t, common.UnmarshalJsonStr(dataPayload(w.Body.String()), &parsed))
+				got = parsed.Model
+				if parsed.Message != nil {
+					got = parsed.Message.Model
+				}
+			} else {
+				var parsed struct {
+					Model string `json:"model"`
+				}
+				require.NoError(t, common.UnmarshalJsonStr(w.Body.String(), &parsed))
+				got = parsed.Model
+			}
+			assert.Equal(t, tc.want, got)
+			require.NotNil(t, info.ResponseModel)
+			assert.Equal(t, upstreamModel, info.ResponseModel.ReturnedModel, "diagnostics keep the upstream declaration")
+		})
+	}
+}
+
+func TestClaudeUsageChunkEchoesRequestedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	info := &relaycommon.RelayInfo{
+		OriginModelName:    "requested",
+		RelayFormat:        types.RelayFormatOpenAI,
+		ShouldIncludeUsage: true,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			UpstreamModelName: "mapped",
+			ChannelSetting:    dto.ChannelSettings{RewriteResponseModel: true},
+		},
+	}
+	HandleStreamFinalResponse(c, info, &ClaudeResponseInfo{
+		Usage: &dto.Usage{PromptTokens: 5, CompletionTokens: 1},
+		Done:  true,
+	})
+	var usageChunk struct {
+		Model string `json:"model"`
+	}
+	payload, ok := strings.CutPrefix(w.Body.String(), "data: ")
+	require.True(t, ok)
+	require.NoError(t, common.UnmarshalJsonStr(strings.SplitN(payload, "\n", 2)[0], &usageChunk))
+	assert.Equal(t, "requested", usageChunk.Model)
+}
