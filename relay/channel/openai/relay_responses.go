@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -66,6 +67,69 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 	return usage, nil
 }
 
+// maxHeldResponsesEvents bounds the lifecycle events held before the first
+// output, so a chatty upstream cannot grow the buffer without limit.
+const maxHeldResponsesEvents = 256
+
+// responsesStreamPreliminaryEvent reports whether an event only announces the
+// response and carries no output yet.
+func responsesStreamPreliminaryEvent(eventType string) bool {
+	switch eventType {
+	case "response.created", "response.in_progress", "response.queued":
+		return true
+	}
+	return false
+}
+
+// responsesStreamFailureEvent reports whether an event terminates the response
+// as a failure.
+func responsesStreamFailureEvent(eventType string) bool {
+	switch eventType {
+	case "response.failed", "response.error", "error":
+		return true
+	}
+	return false
+}
+
+// responsesStreamFailureError converts an upstream failure event into the HTTP
+// error the client should receive. It is only used while nothing has been
+// written downstream: a rate limit keeps its 429 so callers back off, a request
+// error is not retried, and everything else becomes a retryable 503.
+func responsesStreamFailureError(event *dto.ResponsesStreamResponse) *types.NewAPIError {
+	var upstreamErr *types.OpenAIError
+	if event.Response != nil {
+		upstreamErr = event.Response.GetOpenAIError()
+	}
+	if upstreamErr == nil || (upstreamErr.Message == "" && upstreamErr.Code == nil && upstreamErr.Type == "") {
+		upstreamErr = dto.GetOpenAIError(event.Error)
+	}
+	if upstreamErr == nil {
+		upstreamErr = &types.OpenAIError{}
+	}
+	if upstreamErr.Message == "" {
+		upstreamErr.Message = fmt.Sprintf("upstream responses stream failed (%s)", event.Type)
+	}
+	if upstreamErr.Code == nil && upstreamErr.Type != "" {
+		// Some failures carry only a type; keep it as the code so the error log
+		// and the client see the upstream classification.
+		upstreamErr.Code = upstreamErr.Type
+	}
+	code := ""
+	if upstreamErr.Code != nil {
+		code = strings.ToLower(fmt.Sprint(upstreamErr.Code))
+	}
+	errorType := strings.ToLower(upstreamErr.Type)
+	switch {
+	case code == "rate_limit_exceeded", code == "too_many_requests", code == "insufficient_quota",
+		errorType == "too_many_requests", errorType == "rate_limit_error":
+		return types.WithOpenAIError(*upstreamErr, http.StatusTooManyRequests)
+	case errorType == "invalid_request_error", code == "context_length_exceeded", strings.HasPrefix(code, "invalid_"):
+		return types.WithOpenAIError(*upstreamErr, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	default:
+		return types.WithOpenAIError(*upstreamErr, http.StatusServiceUnavailable)
+	}
+}
+
 func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
 	if resp == nil || resp.Body == nil {
 		logger.LogError(c, common.LogText("invalid response or response body"))
@@ -75,6 +139,21 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 	defer service.CloseResponseBodyGracefully(resp)
 
 	accumulator := service.NewResponsesUsageAccumulator(info)
+
+	// Events sent before the first output are held back. Until one byte reaches
+	// the client the HTTP status is still open, so a stream that fails right
+	// after response.created answers with 429/503 and the relay can retry,
+	// instead of a 200 that the client can only read as a broken stream. Held
+	// events are replayed in order ahead of the first real event.
+	type heldEvent struct {
+		event dto.ResponsesStreamResponse
+		data  string
+	}
+	var (
+		held      []heldEvent
+		committed bool
+		streamErr *types.NewAPIError
+	)
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 
@@ -89,6 +168,31 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 			data = string(rewriteSGLangResponsesCreatedAt(info, []byte(data), "response.created_at", streamResponse.Response.CreatedAt))
 		}
 		accumulator.Observe(&streamResponse, common.StringToByteSlice(data))
+
+		if !committed {
+			switch {
+			case c.Writer.Written():
+				// A keepalive ping already committed the HTTP 200.
+				committed = true
+			case responsesStreamFailureEvent(streamResponse.Type):
+				streamErr = responsesStreamFailureError(&streamResponse)
+				sr.Stop(streamErr)
+				return
+			case responsesStreamPreliminaryEvent(streamResponse.Type) && len(held) < maxHeldResponsesEvents:
+				held = append(held, heldEvent{event: streamResponse, data: data})
+				return
+			default:
+				committed = true
+			}
+			for _, buffered := range held {
+				if err := helper.ResponseChunkData(c, buffered.event, buffered.data); err != nil {
+					sr.Stop(err)
+					return
+				}
+			}
+			held = nil
+		}
+
 		if err := helper.ResponseChunkData(c, streamResponse, data); err != nil {
 			sr.Stop(err)
 			return
@@ -100,6 +204,21 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 	})
 
 	common.SetContextKey(c, constant.ContextKeyResponseStreamStatus, info.StreamStatus)
+
+	// Nothing reached the client, so a stream that ended without output still
+	// becomes a retryable HTTP error instead of an empty 200.
+	if streamErr == nil && !committed && !c.Writer.Written() && c.Request.Context().Err() == nil {
+		streamErr = types.NewOpenAIError(
+			fmt.Errorf("upstream responses stream ended before any output"),
+			types.ErrorCodeEmptyResponse,
+			http.StatusServiceUnavailable,
+		)
+	}
+	if streamErr != nil && !c.Writer.Written() {
+		helper.ResetEventStreamHeaders(c)
+		return nil, streamErr
+	}
+
 	info.StreamStatus.RequireTerminal()
 	return accumulator.Finish(), nil
 }

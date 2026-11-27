@@ -606,21 +606,24 @@ const (
 
 // ResponsesStreamResponse 用于处理 /v1/responses 流式响应
 type ResponsesStreamResponse struct {
-	Type            string                   `json:"type"`
-	Response        *OpenAIResponsesResponse `json:"response,omitempty"`
-	Code            string                   `json:"code,omitempty"`
-	Message         string                   `json:"message,omitempty"`
-	Param           string                   `json:"param,omitempty"`
-	Delta           string                   `json:"delta,omitempty"`
-	Arguments       *string                  `json:"arguments,omitempty"`
-	Input           *string                  `json:"input,omitempty"`
-	Name            string                   `json:"name,omitempty"`
-	Text            *string                  `json:"text,omitempty"`
-	Item            *ResponsesOutput         `json:"item,omitempty"`
-	SequenceNumber  *int                     `json:"sequence_number,omitempty"`
-	Annotation      json.RawMessage          `json:"annotation,omitempty"`
-	AnnotationIndex *int                     `json:"annotation_index,omitempty"`
-	Obfuscation     string                   `json:"obfuscation,omitempty"`
+	Type     string                   `json:"type"`
+	Response *OpenAIResponsesResponse `json:"response,omitempty"`
+	// Error carries the "error" event payload, whose fields are nested under
+	// "error" instead of the top level (Azure and OpenAI both send it that way).
+	Error           any              `json:"error,omitempty"`
+	Code            string           `json:"code,omitempty"`
+	Message         string           `json:"message,omitempty"`
+	Param           string           `json:"param,omitempty"`
+	Delta           string           `json:"delta,omitempty"`
+	Arguments       *string          `json:"arguments,omitempty"`
+	Input           *string          `json:"input,omitempty"`
+	Name            string           `json:"name,omitempty"`
+	Text            *string          `json:"text,omitempty"`
+	Item            *ResponsesOutput `json:"item,omitempty"`
+	SequenceNumber  *int             `json:"sequence_number,omitempty"`
+	Annotation      json.RawMessage  `json:"annotation,omitempty"`
+	AnnotationIndex *int             `json:"annotation_index,omitempty"`
+	Obfuscation     string           `json:"obfuscation,omitempty"`
 	// - response.function_call_arguments.delta
 	// - response.function_call_arguments.done
 	// - response.custom_tool_call_input.delta

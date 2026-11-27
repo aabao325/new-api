@@ -211,6 +211,20 @@ func SetEventStreamHeaders(c *gin.Context) {
 	c.Writer = &streamResponseWriter{ResponseWriter: c.Writer}
 }
 
+// ResetEventStreamHeaders undoes SetEventStreamHeaders for a stream that
+// failed before writing anything. The response can then answer with a normal
+// JSON HTTP status, and a retry of the same request can set the headers again.
+func ResetEventStreamHeaders(c *gin.Context) {
+	if c == nil || c.Writer == nil {
+		return
+	}
+	delete(c.Keys, "event_stream_headers_set")
+	header := c.Writer.Header()
+	for _, name := range []string{"Content-Type", "Cache-Control", "Connection", "Transfer-Encoding", "X-Accel-Buffering"} {
+		header.Del(name)
+	}
+}
+
 func ClaudeData(c *gin.Context, resp dto.ClaudeResponse) error {
 	if requestContextDone(c) {
 		return nil

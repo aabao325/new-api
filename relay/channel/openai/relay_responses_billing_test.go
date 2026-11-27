@@ -612,6 +612,121 @@ func TestOaiResponsesStreamHandlerKeepsNonSGLangCreatedAt(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `1786588600.0`)
 }
 
+// Azure answers a rate-limited Responses request with HTTP 200,
+// response.created, response.failed and error, then closes the stream. The
+// failure must reach the client as a normal HTTP error before anything is
+// written, so the relay can retry and the client can back off.
+func TestOaiResponsesStreamHandlerFailureBeforeOutput(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	oldTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() {
+		constant.StreamingTimeout = oldTimeout
+	})
+
+	const created = `{"type":"response.created","response":{"status":"in_progress"}}`
+	const rateLimited = `{"type":"response.failed","response":{"status":"failed","error":{"type":null,"code":"rate_limit_exceeded","message":"Your requests to gpt-6.1-sol for gpt-6.1-sol in swedencentral have exceeded token rate limit."}}}`
+
+	for _, tc := range []struct {
+		name          string
+		frames        []string
+		wantStatus    int
+		wantCode      string
+		wantMessage   string
+		wantSkipRetry bool
+		wantStreamed  bool
+	}{
+		{
+			name:        "rate limit before output",
+			frames:      []string{created, rateLimited},
+			wantStatus:  http.StatusTooManyRequests,
+			wantCode:    "rate_limit_exceeded",
+			wantMessage: "have exceeded token rate limit",
+		},
+		{
+			name: "error event before output",
+			frames: []string{created,
+				`{"type":"error","error":{"type":"too_many_requests","code":"rate_limit_exceeded","message":"exceeded token rate limit"}}`},
+			wantStatus:  http.StatusTooManyRequests,
+			wantCode:    "rate_limit_exceeded",
+			wantMessage: "exceeded token rate limit",
+		},
+		{
+			name:        "server failure before output",
+			frames:      []string{created, `{"type":"response.failed","response":{"status":"failed","error":{"type":"server_error","message":"boom"}}}`},
+			wantStatus:  http.StatusServiceUnavailable,
+			wantCode:    "server_error",
+			wantMessage: "boom",
+		},
+		{
+			name:          "invalid request before output",
+			frames:        []string{created, `{"type":"response.failed","response":{"status":"failed","error":{"type":"invalid_request_error","message":"bad input"}}}`},
+			wantStatus:    http.StatusBadRequest,
+			wantCode:      "invalid_request_error",
+			wantMessage:   "bad input",
+			wantSkipRetry: true,
+		},
+		{
+			name:        "empty stream",
+			wantStatus:  http.StatusServiceUnavailable,
+			wantCode:    "empty_response",
+			wantMessage: "before any output",
+		},
+		{
+			name:         "output then failure is forwarded",
+			frames:       []string{created, `{"type":"response.output_text.delta","delta":"hello"}`, rateLimited},
+			wantStreamed: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sse := &strings.Builder{}
+			for _, frame := range tc.frames {
+				sse.WriteString("data: " + frame + "\n\n")
+			}
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+			info := &relaycommon.RelayInfo{
+				RelayFormat:     types.RelayFormatOpenAIResponses,
+				OriginModelName: "gpt-6.1-sol",
+				IsStream:        true,
+				DisablePing:     true,
+				StartTime:       time.Now(),
+				ChannelMeta:     &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeAzure, UpstreamModelName: "gpt-6.1-sol"},
+			}
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(sse.String())),
+				Header:     http.Header{"Content-Type": {"text/event-stream"}},
+			}
+
+			usage, apiErr := OaiResponsesStreamHandler(c, info, resp)
+
+			if tc.wantStreamed {
+				require.Nil(t, apiErr)
+				require.NotNil(t, usage)
+				assert.Contains(t, recorder.Body.String(), "event: response.created")
+				assert.Contains(t, recorder.Body.String(), "event: response.output_text.delta")
+				assert.Contains(t, recorder.Body.String(), "event: response.failed")
+				return
+			}
+
+			require.NotNil(t, apiErr)
+			assert.Nil(t, usage)
+			assert.Equal(t, tc.wantStatus, apiErr.StatusCode)
+			assert.Equal(t, tc.wantCode, string(apiErr.GetErrorCode()))
+			assert.Contains(t, apiErr.Error(), tc.wantMessage)
+			assert.Equal(t, tc.wantSkipRetry, types.IsSkipRetryError(apiErr))
+			// Nothing reached the client and the response no longer claims to
+			// be an event stream, so the relay can answer with a JSON status.
+			assert.Empty(t, recorder.Body.String())
+			assert.Empty(t, recorder.Header().Get("Content-Type"))
+			_, headersSet := c.Get("event_stream_headers_set")
+			assert.False(t, headersSet)
+		})
+	}
+}
+
 // A converted hosted web search reaches Azure and Xinference Chat Completions
 // as web_search_options, like OpenAI; the upstream decides whether it applies.
 // Azure Responses bills web search by tool_usage.web_search.num_requests (Bing
